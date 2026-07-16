@@ -1900,7 +1900,7 @@ export default function App() {
                   type="submit"
                   className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
-                  🔐 लॉगिन करा (Sign In)
+                  {lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)'}
                 </button>
 
                 <div className="flex justify-center pt-1">
@@ -2140,6 +2140,18 @@ export default function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Language Selector */}
+            <select
+              value={lang}
+              onChange={(e) => changeLanguage(e.target.value as Language)}
+              className="bg-forest-50 hover:bg-forest-100 border border-forest-200 text-forest-700 font-bold text-[11px] py-1 px-2 rounded-xl transition-all cursor-pointer shadow-sm focus:outline-none"
+              title="भाषा निवडा / Choose Language"
+            >
+              <option value="MARATHI">मराठी (Marathi)</option>
+              <option value="ENGLISH">English</option>
+              <option value="HINDI">हिंदी (Hindi)</option>
+            </select>
+
             {/* Dynamic Large Font Accessibility Toggle for rural older shopkeepers */}
             <button
               onClick={() => {
@@ -5011,11 +5023,11 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
       {/* MOBILE BOTTOM NAVIGATION BAR */}
       <nav className="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-forest-100 shadow-lg py-2 flex justify-around z-40">
         {[
-          { id: 'home', icon: TrendingUp, label: '📊 होम' },
-          { id: 'billing', icon: ShoppingBag, label: '🛍️ विक्री' },
-          { id: 'stock', icon: Boxes, label: '📦 स्टॉक' },
-          { id: 'reports', icon: FileText, label: '📑 रिपोर्ट' },
-          ...(role === 'MASTER_ADMIN' ? [{ id: 'shops', icon: Settings, label: '🏬 दुकाने' }] : [{ id: 'settings', icon: Settings, label: '⚙️ सेटिंग' }]),
+          { id: 'home', icon: TrendingUp, label: '📊 ' + Loc.t('home', lang) },
+          { id: 'billing', icon: ShoppingBag, label: '🛍️ ' + Loc.t('billing', lang) },
+          { id: 'stock', icon: Boxes, label: '📦 ' + Loc.t('stock', lang) },
+          { id: 'reports', icon: FileText, label: '📑 ' + Loc.t('reports', lang) },
+          ...(role === 'MASTER_ADMIN' ? [{ id: 'shops', icon: Settings, label: '🏬 ' + (lang === 'ENGLISH' ? 'Shop Management' : 'दुकाने') }] : [{ id: 'settings', icon: Settings, label: '⚙️ ' + Loc.t('settings', lang) }]),
         ].filter(item => {
           if (role === 'MASTER_ADMIN') {
             return item.id === 'shops';
