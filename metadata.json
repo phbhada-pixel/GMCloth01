@@ -1,0 +1,6 @@
+{
+  "name": "Textile Shop Manager Pro",
+  "description": "Production ready offline-first Textile Shop Manager application supporting Marathi, Hindi, and English with Supabase integration.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,124 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#F9F9F6] text-[#191C17];
+  }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5e9;
+}
+::-webkit-scrollbar-thumb {
+  background: #ceddce;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #386a20;
+}
+
+/* Print utility styles */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide screen-only containers but let print-only containers render */
+  header, nav, main, footer, .no-print {
+    display: none !important;
+  }
+  
+  #root > div > *:not(.print-only) {
+    display: none !important;
+  }
+  
+  /* Show only the print-area container */
+  #root .print-only, .print-only {
+    display: block !important;
+    visibility: visible !important;
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 10px !important;
+    background: white !important;
+  }
+
+  .print-only * {
+    visibility: visible !important;
+  }
+
+  /* Thermal receipt styling */
+  .thermal-receipt {
+    width: 80mm;
+    max-width: 100%;
+    margin: 0 auto;
+    background: white !important;
+    color: black !important;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .thermal-receipt table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .thermal-receipt th, .thermal-receipt td {
+    padding: 4px 0;
+    text-align: left;
+  }
+
+  .thermal-receipt .border-dashed-y {
+    border-top: 1px dashed #000;
+    border-bottom: 1px dashed #000;
+  }
+
+  .thermal-receipt .border-double-bottom {
+    border-bottom: 3px double #000;
+  }
+
+  /* Page break rules for clean labels */
+  .label-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+}
+
+/* Dynamic Large Font support for older rural shopkeepers */
+.large-text-mode {
+  font-size: 112% !important;
+}
+.large-text-mode h1 {
+  font-size: 1.55rem !important;
+}
+.large-text-mode h2 {
+  font-size: 1.4rem !important;
+}
+.large-text-mode h3 {
+  font-size: 1.25rem !important;
+}
+.large-text-mode p, .large-text-mode span, .large-text-mode label, .large-text-mode button, .large-text-mode select, .large-text-mode input, .large-text-mode option {
+  font-size: 0.98rem !important;
+}
+.large-text-mode .text-xs {
+  font-size: 0.88rem !important;
+}
+.large-text-mode .text-\[10px\], .large-text-mode .text-\[11px\] {
+  font-size: 0.82rem !important;
+}
+.large-text-mode .text-\[9px\] {
+  font-size: 0.78rem !important;
+}
+
