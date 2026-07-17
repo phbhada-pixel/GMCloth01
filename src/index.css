@@ -122,3 +122,51 @@
   font-size: 0.78rem !important;
 }
 
+/* Mobile Attractive & Bold Text Interface Overrides */
+@media (max-width: 768px) {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Thicker base text on mobile for better readability and attractive look */
+  p, span, div, label, input, button {
+    font-weight: 600;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 900 !important;
+    letter-spacing: -0.01em;
+  }
+  
+  .font-normal, .font-medium {
+    font-weight: 600 !important;
+  }
+  
+  .font-bold {
+    font-weight: 800 !important;
+  }
+  
+  .font-extrabold, .font-black {
+    font-weight: 900 !important;
+  }
+  
+  /* Slightly boost text sizes for smaller text classes on mobile to prevent strain */
+  .text-xs {
+    font-size: 0.85rem !important;
+  }
+  
+  .text-\[9px\] {
+    font-size: 0.75rem !important;
+  }
+  
+  .text-\[10px\] {
+    font-size: 0.8rem !important;
+  }
+  
+  .text-\[11px\] {
+    font-size: 0.85rem !important;
+  }
+}
+
+

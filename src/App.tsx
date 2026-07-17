@@ -425,6 +425,7 @@ export default function App() {
   const [gstNumber, setGstNumber] = useState('२७एएएसीएफ१२३४ए१जेड५');
   const [upiId, setUpiId] = useState('maulicloth@oksbi');
   const [whatsNo, setWhatsNo] = useState('9876543210');
+  const [showMonthlyReportPrint, setShowMonthlyReportPrint] = useState(false);
 
   // Sync shop info state when currentShopId changes
   useEffect(() => {
@@ -3279,6 +3280,21 @@ export default function App() {
                           </h3>
                           <p className="text-xs text-gray-500 mt-0.5">महिन्यानुसार एकूण विक्री, नफा आणि थकबाकीची माहिती.</p>
                         </div>
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            onClick={() => {
+                              setShowMonthlyReportPrint(true);
+                              setTimeout(() => {
+                                window.print();
+                                setShowMonthlyReportPrint(false);
+                              }, 300);
+                            }}
+                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 shadow-sm transition-all active:scale-95"
+                            title="मासिक अहवाल PDF म्हणून प्रिंट करा"
+                          >
+                            🖨️ प्रिंट (Print)
+                          </button>
+                        </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                         {monthlyStats.map((stat) => (
@@ -5961,6 +5977,58 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
               <p className="text-[10px]">भेट दिल्याबद्दल धन्यवाद! पुन्हा अवश्य यावे.</p>
               <p className="text-[8px] text-gray-400 pt-2 border-t border-dotted border-gray-300">Powered by Mauli Garments billing</p>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* PRINT-ONLY AREA FOR MONTHLY REPORT */}
+      {showMonthlyReportPrint && monthlyStats.length > 0 && (
+        <div className="hidden print-only bg-white text-black p-8 w-full max-w-4xl mx-auto">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-black uppercase tracking-wider border-b-4 border-black pb-2">{shopName}</h1>
+            <p className="text-sm font-bold mt-2">मासिक अहवाल (Monthly Business Report)</p>
+            <p className="text-xs mt-1">दिनांक: {new Date().toLocaleDateString('mr-IN', { day: '2-digit', month: 'short', year: 'numeric' })} | वेळ: {new Date().toLocaleTimeString('mr-IN', { hour: '2-digit', minute: '2-digit' })}</p>
+          </div>
+          
+          <div className="grid grid-cols-3 gap-4 mb-6">
+            <div className="border-2 border-black p-3 text-center">
+              <p className="text-xs font-bold uppercase mb-1">एकूण विक्री (Total Sales)</p>
+              <p className="text-xl font-black">₹{totalSalesVal.toFixed(0)}</p>
+            </div>
+            <div className="border-2 border-black p-3 text-center">
+              <p className="text-xs font-bold uppercase mb-1">अंदाजित नफा (Total Profit)</p>
+              <p className="text-xl font-black">₹{estimatedProfit.toFixed(0)}</p>
+            </div>
+            <div className="border-2 border-black p-3 text-center">
+              <p className="text-xs font-bold uppercase mb-1">एकूण थकबाकी (Total Pending)</p>
+              <p className="text-xl font-black">₹{totalOutstanding.toFixed(0)}</p>
+            </div>
+          </div>
+
+          <table className="w-full border-collapse border border-black text-sm">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border border-black p-2 text-left">महिना (Month)</th>
+                <th className="border border-black p-2 text-right">एकूण विक्री (Sales)</th>
+                <th className="border border-black p-2 text-right">नफा (Profit - 35%)</th>
+                <th className="border border-black p-2 text-right">थकबाकी (Pending)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {monthlyStats.map((stat, i) => (
+                <tr key={stat.monthKey} className={i % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                  <td className="border border-black p-2 font-bold">{stat.monthLabel}</td>
+                  <td className="border border-black p-2 text-right">₹{stat.totalSales.toFixed(0)}</td>
+                  <td className="border border-black p-2 text-right">₹{stat.totalProfit.toFixed(0)}</td>
+                  <td className="border border-black p-2 text-right text-red-600 font-bold">₹{stat.pendingCollections.toFixed(0)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          
+          <div className="mt-12 flex justify-between border-t border-black pt-2 text-xs font-bold">
+            <p>Generated by: {role} ({currentUser?.username || 'Admin'})</p>
+            <p>Authorised Signatory</p>
           </div>
         </div>
       )}
