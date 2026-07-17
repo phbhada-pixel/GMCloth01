@@ -510,11 +510,12 @@ export default function App() {
     }
 
     // Load shop-specific Supabase credentials
-    const shopUrl = localStorage.getItem('sb_url_' + currentShopId) || localStorage.getItem('sb_url') || '';
-    const shopKey = localStorage.getItem('sb_key_' + currentShopId) || localStorage.getItem('sb_key') || '';
+    const matchedShop = shops.find(s => s.id === currentShopId);
+    const shopUrl = matchedShop?.sbUrl || localStorage.getItem('sb_url_' + currentShopId) || localStorage.getItem('sb_url') || '';
+    const shopKey = matchedShop?.sbKey || localStorage.getItem('sb_key_' + currentShopId) || localStorage.getItem('sb_key') || '';
     setSbUrl(shopUrl);
     setSbKey(shopKey);
-  }, [currentShopId]);
+  }, [currentShopId, shops]);
 
   // Sync Supabase Client if credentials exist
   useEffect(() => {
@@ -550,9 +551,9 @@ export default function App() {
   }, [masterSbUrl, masterSbKey]);
 
   // Helper to upload a list to Supabase
-  const uploadTableToSupabase = async (tableName: string, dataArray: any[]) => {
+  const uploadTableToSupabase = async (tableName: string, dataArray: any[], forceUseMaster: boolean = false) => {
     const isMasterTable = tableName === 't_shops' || tableName === 't_user_accounts';
-    const useMaster = isMasterTable && role === 'MASTER_ADMIN';
+    const useMaster = forceUseMaster || (isMasterTable && role === 'MASTER_ADMIN');
 
     const url = useMaster ? masterSbUrl : sbUrl;
     const key = useMaster ? masterSbKey : sbKey;
@@ -1088,9 +1089,9 @@ export default function App() {
   };
 
   // Helper to download a table from Supabase
-  const downloadTableFromSupabase = async (tableName: string) => {
+  const downloadTableFromSupabase = async (tableName: string, forceUseMaster: boolean = false) => {
     const isMasterTable = tableName === 't_shops' || tableName === 't_user_accounts';
-    const useMaster = isMasterTable && role === 'MASTER_ADMIN';
+    const useMaster = forceUseMaster || (isMasterTable && role === 'MASTER_ADMIN');
 
     const url = useMaster ? masterSbUrl : sbUrl;
     const key = useMaster ? masterSbKey : sbKey;
@@ -1127,9 +1128,9 @@ export default function App() {
   };
 
   // Smart Bi-directional sync for a single table
-  const smartSyncTable = async (tableName: string, localItems: any[], updateLocalState: (merged: any[]) => void, localStorageKey: string) => {
+  const smartSyncTable = async (tableName: string, localItems: any[], updateLocalState: (merged: any[]) => void, localStorageKey: string, forceUseMaster: boolean = false) => {
     setSyncLogs(prev => [...prev, `⏳ '${tableName}' टेबल सिंक करत आहे...`]);
-    const cloudItems = await downloadTableFromSupabase(tableName);
+    const cloudItems = await downloadTableFromSupabase(tableName, forceUseMaster);
     
     if (cloudItems === null) {
       const errorMsg = `❌ '${tableName}' डेटा क्लाउडवरून मिळवता आला नाही. कृपया खात्री करा की टेबल तयार आहे!`;
@@ -1176,7 +1177,7 @@ export default function App() {
     // If there were local updates or list expanded, upload to cloud
     if (localUpdatedCount > 0 || mergedList.length > cloudItems.length) {
       setSyncLogs(prev => [...prev, `📤 '${tableName}' मधील ${localUpdatedCount || (mergedList.length - cloudItems.length)} बदल क्लाउडवर पाठवत आहे...`]);
-      const res = await uploadTableToSupabase(tableName, mergedList);
+      const res = await uploadTableToSupabase(tableName, mergedList, forceUseMaster);
       if (!res?.success) {
         setSyncLogs(prev => [...prev, `⚠️ '${tableName}' चे बदल क्लाउडवर सेव्ह करताना त्रुटी आली!`]);
       }
@@ -1257,31 +1258,48 @@ export default function App() {
 
   // Silent auto-sync for background synchronization
   const silentSmartSync = async () => {
-    const isMaster = role === 'MASTER_ADMIN';
-    const activeUrl = isMaster ? masterSbUrl : sbUrl;
-    const activeKey = isMaster ? masterSbKey : sbKey;
-
-    if (isSyncing || !activeUrl || !activeKey || !navigator.onLine) return;
+    if (isSyncing || !navigator.onLine) return;
     setIsSyncing(true);
     try {
-      if (isMaster) {
-        await smartSyncTable('t_shops', shops, setShops, 't_shops');
-        await smartSyncTable('t_user_accounts', users, setUsers, 't_users');
-      } else {
-        await smartSyncTable('t_user_accounts', users, setUsers, 't_users');
-        await smartSyncTable('t_products', products, setProducts, 't_products_' + currentShopId);
-        await smartSyncTable('t_customers', customers, setCustomers, 't_customers_' + currentShopId);
-        await smartSyncTable('t_suppliers', suppliers, setSuppliers, 't_suppliers_' + currentShopId);
-        await smartSyncTable('t_sales', sales, setSales, 't_sales_' + currentShopId);
-        await smartSyncTable('t_purchases', purchases, setPurchases, 't_purchases_' + currentShopId);
-        await smartSyncTable('t_audit_logs', auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId);
+      let syncDone = false;
+
+      // 1. Sync master tables if master database is configured
+      if (masterSbUrl && masterSbKey) {
+        try {
+          await smartSyncTable('t_shops', shops, setShops, 't_shops', true);
+          await smartSyncTable('t_user_accounts', users, setUsers, 't_users', true);
+          syncDone = true;
+        } catch (err) {
+          console.warn("Silent master sync failed:", err);
+        }
+      }
+
+      // 2. Sync shop-specific tables if shop database is configured and role is active
+      const isMaster = role === 'MASTER_ADMIN';
+      if (!isMaster && sbUrl && sbKey) {
+        try {
+          if (!masterSbUrl || !masterSbKey) {
+            await smartSyncTable('t_user_accounts', users, setUsers, 't_users', false);
+          }
+          await smartSyncTable('t_products', products, setProducts, 't_products_' + currentShopId, false);
+          await smartSyncTable('t_customers', customers, setCustomers, 't_customers_' + currentShopId, false);
+          await smartSyncTable('t_suppliers', suppliers, setSuppliers, 't_suppliers_' + currentShopId, false);
+          await smartSyncTable('t_sales', sales, setSales, 't_sales_' + currentShopId, false);
+          await smartSyncTable('t_purchases', purchases, setPurchases, 't_purchases_' + currentShopId, false);
+          await smartSyncTable('t_audit_logs', auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId, false);
+          syncDone = true;
+        } catch (err) {
+          console.warn("Silent shop sync failed:", err);
+        }
       }
       
-      setSyncToast({
-        message: "✅ क्लाउड डेटाबेससह स्वयंचलित सिंक्रोनाइझेशन यशस्वीरित्या पूर्ण झाले!",
-        type: "success"
-      });
-      setTimeout(() => setSyncToast(prev => prev.message.includes("यशस्वीरित्या") ? { message: '', type: null } : prev), 3500);
+      if (syncDone) {
+        setSyncToast({
+          message: "✅ क्लाउड डेटाबेससह स्वयंचलित सिंक्रोनाइझेशन यशस्वीरित्या पूर्ण झाले!",
+          type: "success"
+        });
+        setTimeout(() => setSyncToast(prev => prev.message.includes("यशस्वीरित्या") ? { message: '', type: null } : prev), 3500);
+      }
     } catch (err) {
       console.warn("Silent sync could not complete (network may be weak):", err);
     } finally {
@@ -1317,16 +1335,16 @@ export default function App() {
     window.addEventListener('offline', handleOffline);
 
     // Run initial silent sync if online and configured
-    if (navigator.onLine && sbUrl && sbKey) {
+    if (navigator.onLine && ((sbUrl && sbKey) || (masterSbUrl && masterSbKey))) {
       silentSmartSync();
     }
 
-    // Background checker: Retry syncing every 40 seconds if online
+    // Background checker: Retry syncing every 15 seconds if online
     const interval = setInterval(() => {
-      if (navigator.onLine && sbUrl && sbKey) {
+      if (navigator.onLine && ((sbUrl && sbKey) || (masterSbUrl && masterSbKey))) {
         silentSmartSync();
       }
-    }, 40000);
+    }, 15000);
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -1633,6 +1651,14 @@ export default function App() {
     localStorage.setItem('sb_url_' + currentShopId, url);
     localStorage.setItem('sb_key_' + currentShopId, key);
     
+    // Also save in shops list so it's synchronized to master Supabase
+    const updatedShops = shops.map(s => s.id === currentShopId ? { ...s, sbUrl: url, sbKey: key } : s);
+    setShops(updatedShops);
+    localStorage.setItem('t_shops', JSON.stringify(updatedShops));
+    if (masterSbUrl && masterSbKey) {
+      uploadTableToSupabase('t_shops', updatedShops);
+    }
+
     // Fallback global values
     if (!localStorage.getItem('sb_url')) localStorage.setItem('sb_url', url);
     if (!localStorage.getItem('sb_key')) localStorage.setItem('sb_key', key);
@@ -3666,7 +3692,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -3788,7 +3816,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4399,7 +4429,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4425,7 +4457,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4472,7 +4506,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4594,7 +4630,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "whatsNo" TEXT NOT NULL,
   "upiId" TEXT NOT NULL,
   "gstNumber" TEXT,
-  created_at BIGINT NOT NULL
+  created_at BIGINT NOT NULL,
+  sb_url TEXT,
+  sb_key TEXT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4780,6 +4818,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                       const sWhats = fd.get('shop_whats') as string;
                       const sUpi = fd.get('shop_upi') as string;
                       const sGst = fd.get('shop_gst') as string;
+                      const sUrl = (fd.get('shop_sb_url') as string || '').trim();
+                      const sKey = (fd.get('shop_sb_key') as string || '').trim();
 
                       const newShop: Shop = {
                         id: `shop-${Date.now()}`,
@@ -4788,6 +4828,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                         whatsNo: sWhats,
                         upiId: sUpi,
                         gstNumber: sGst,
+                        sbUrl: sUrl || undefined,
+                        sbKey: sKey || undefined,
                         created_at: Date.now()
                       };
 
@@ -4821,6 +4863,14 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                       <div className="space-y-1">
                         <label className="font-bold text-gray-600 block">GST क्रमांक (GST No. - ऐच्छिक)</label>
                         <input type="text" name="shop_gst" placeholder="उदा. 27AAA..." className="w-full border p-2 rounded-lg uppercase text-gray-800" />
+                      </div>
+                      <div className="space-y-1 border-t pt-2 mt-2">
+                        <label className="font-bold text-purple-700 block">Supabase Project URL (स्वतंत्र डेटाबेस - ऐच्छिक)</label>
+                        <input type="text" name="shop_sb_url" placeholder="https://your-shop-project.supabase.co" className="w-full border p-2 rounded-lg text-gray-800 font-mono text-[11px]" />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="font-bold text-purple-700 block">Supabase Anon Key (स्वतंत्र डेटाबेस - ऐच्छिक)</label>
+                        <input type="text" name="shop_sb_key" placeholder="eyJhbGciOi..." className="w-full border p-2 rounded-lg text-gray-800 font-mono text-[11px]" />
                       </div>
                       <button type="submit" className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 rounded-lg transition-colors">
                         ➕ दुकान तयार करा (Add Shop)

@@ -107,6 +107,8 @@ export interface Shop {
   upiId: string;
   gstNumber?: string;
   created_at: number;
+  sbUrl?: string;
+  sbKey?: string;
 }
 
 export interface UserAccount {
