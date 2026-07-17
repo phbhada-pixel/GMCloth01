@@ -2170,6 +2170,37 @@ export default function App() {
   const totalSalesVal = sales.reduce((sum, item) => sum + item.grand_total, 0);
   const estimatedProfit = totalSalesVal * 0.35; // 35% standard clothing margin
   const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0);
+  
+  // Monthly Report Calculation
+  const monthlyStats = React.useMemo(() => {
+    const stats: Record<string, { monthKey: string, monthLabel: string, totalSales: number, totalProfit: number, pendingCollections: number }> = {};
+    
+    sales.forEach(sale => {
+      const date = new Date(sale.date);
+      const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      const monthLabel = date.toLocaleString('mr-IN', { month: 'long', year: 'numeric' });
+      
+      if (!stats[monthKey]) {
+        stats[monthKey] = {
+          monthKey,
+          monthLabel,
+          totalSales: 0,
+          totalProfit: 0,
+          pendingCollections: 0
+        };
+      }
+      
+      stats[monthKey].totalSales += sale.grand_total;
+      stats[monthKey].totalProfit += sale.grand_total * 0.35; // Standard 35% profit assumption
+      
+      if (sale.payment_status === 'PENDING') {
+        stats[monthKey].pendingCollections += sale.grand_total;
+      }
+    });
+    
+    return Object.values(stats).sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+  }, [sales]);
+
   const paymentMethodData = {
     UPI: sales.filter(s => s.payment_mode === 'UPI').reduce((sum, s) => sum + s.grand_total, 0),
     CASH: sales.filter(s => s.payment_mode === 'CASH').reduce((sum, s) => sum + s.grand_total, 0),
@@ -3237,6 +3268,41 @@ export default function App() {
                       <span>एकूण व्यवहार संख्या: {sales.length}</span>
                     </div>
                   </div>
+
+                  {/* Monthly Reports */}
+                  {monthlyStats.length > 0 && (
+                    <div className="border border-forest-100 rounded-3xl p-5 bg-white shadow-sm space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-4">
+                        <div>
+                          <h3 className="font-extrabold text-base text-gray-800 flex items-center gap-2">
+                            <span>📅</span> मासिक अहवाल (Monthly Reports)
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">महिन्यानुसार एकूण विक्री, नफा आणि थकबाकीची माहिती.</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {monthlyStats.map((stat) => (
+                          <div key={stat.monthKey} className="bg-gray-50 border border-gray-100 p-4 rounded-2xl flex flex-col gap-2">
+                            <h4 className="font-bold text-sm text-gray-800 border-b border-gray-200 pb-2">{stat.monthLabel}</h4>
+                            <div className="flex justify-between items-center text-xs mt-1">
+                              <span className="text-gray-500 font-bold">एकूण विक्री (Sales)</span>
+                              <span className="font-black text-gray-800">₹{stat.totalSales.toFixed(0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-gray-500 font-bold">नफा (Profit)</span>
+                              <span className="font-black text-forest-600">₹{stat.totalProfit.toFixed(0)}</span>
+                            </div>
+                            <div className="flex justify-between items-center text-xs">
+                              <span className="text-gray-500 font-bold">बाकी (Pending)</span>
+                              <span className={`font-black ${stat.pendingCollections > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
+                                ₹{stat.pendingCollections.toFixed(0)}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Top selling Items */}
                   <div className="border border-forest-100 rounded-2xl p-4">
