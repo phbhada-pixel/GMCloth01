@@ -1183,7 +1183,12 @@ export default function App() {
       if (!cloudItem) {
         // Local only item
         if (localTime === 0 && cloudItems.length > 0) {
-          // Unmodified mock item -> discard
+          // Unmodified mock item -> discard unless it's master admin or default shop
+          if (item.id === 'user-master' || item.id === 'shop-mauli' || item.role === 'MASTER_ADMIN') {
+             mergedMap.set(item.id, item);
+             localUpdatedCount++;
+             return;
+          }
           return;
         }
         mergedMap.set(item.id, item);
