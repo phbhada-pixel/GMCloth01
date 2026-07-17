@@ -270,6 +270,11 @@ const INITIAL_SALES: Sale[] = [
   }
 ];
 
+// MASTER SUPABASE CONFIGURATION
+// Replace these with your actual Master Supabase URL and Key
+const HARDCODED_MASTER_SB_URL = "YOUR_MASTER_SUPABASE_URL_HERE";
+const HARDCODED_MASTER_SB_KEY = "YOUR_MASTER_SUPABASE_ANON_KEY_HERE";
+
 export default function App() {
   // Authentication & Configuration State
   const [role, setRole] = useState<UserRole | null>(() => {
@@ -373,8 +378,8 @@ export default function App() {
   const [isMasterSbUnlocked, setIsMasterSbUnlocked] = useState<boolean>(false);
 
   // Master Admin Separate Supabase States
-  const [masterSbUrl, setMasterSbUrl] = useState(() => import.meta.env.VITE_MASTER_SB_URL || import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('master_sb_url') || '');
-  const [masterSbKey, setMasterSbKey] = useState(() => import.meta.env.VITE_MASTER_SB_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY || localStorage.getItem('master_sb_key') || '');
+  const [masterSbUrl, setMasterSbUrl] = useState(() => (HARDCODED_MASTER_SB_URL && HARDCODED_MASTER_SB_URL !== "YOUR_MASTER_SUPABASE_URL_HERE") ? HARDCODED_MASTER_SB_URL : (import.meta.env.VITE_MASTER_SB_URL || import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('master_sb_url') || ''));
+  const [masterSbKey, setMasterSbKey] = useState(() => (HARDCODED_MASTER_SB_KEY && HARDCODED_MASTER_SB_KEY !== "YOUR_MASTER_SUPABASE_ANON_KEY_HERE") ? HARDCODED_MASTER_SB_KEY : (import.meta.env.VITE_MASTER_SB_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY || localStorage.getItem('master_sb_key') || ''));
   const [masterSupabaseClient, setMasterSupabaseClient] = useState<SupabaseClient | null>(null);
 
   // Email OTP Password Reset States
@@ -439,6 +444,9 @@ export default function App() {
       setGstNumber(activeShop.gstNumber || '');
       setUpiId(activeShop.upiId);
       setWhatsNo(activeShop.whatsNo);
+    } else if (shops.length > 0) {
+      setCurrentShopId(shops[0].id);
+      localStorage.setItem('current_shop_id', shops[0].id);
     }
   }, [currentShopId, shops]);
 
@@ -771,6 +779,20 @@ export default function App() {
       if (matched.shopId) {
         setCurrentShopId(matched.shopId);
         localStorage.setItem('current_shop_id', matched.shopId);
+        
+        // Auto-configure shop's Supabase credentials from master db record
+        const myShop = shops.find(s => s.id === matched.shopId);
+        if (myShop && myShop.sbUrl && myShop.sbKey) {
+          setSbUrl(myShop.sbUrl);
+          setSbKey(myShop.sbKey);
+          localStorage.setItem('sb_url', myShop.sbUrl);
+          localStorage.setItem('sb_key', myShop.sbKey);
+        } else {
+          setSbUrl('');
+          setSbKey('');
+          localStorage.removeItem('sb_url');
+          localStorage.removeItem('sb_key');
+        }
       }
       
       // Setup default audit log for successful login
@@ -1144,33 +1166,40 @@ export default function App() {
 
     const mergedMap = new Map<string, any>();
     
-    // Add local items
-    localItems.forEach(item => {
-      mergedMap.set(item.id, item);
-    });
-
     let newFromCloudCount = 0;
     let updatedFromCloudCount = 0;
     let localUpdatedCount = 0;
 
-    // Merge cloud items
+    // Add cloud items first
     cloudItems.forEach((cloudItem: any) => {
-      const localItem = mergedMap.get(cloudItem.id);
-      if (!localItem) {
-        mergedMap.set(cloudItem.id, cloudItem);
-        newFromCloudCount++;
+      mergedMap.set(cloudItem.id, cloudItem);
+    });
+
+    // Merge local items
+    localItems.forEach(item => {
+      const cloudItem = mergedMap.get(item.id);
+      const localTime = item.last_updated || item.timestamp || item.created_at || 0;
+      
+      if (!cloudItem) {
+        // Local only item
+        if (localTime === 0 && cloudItems.length > 0) {
+          // Unmodified mock item -> discard
+          return;
+        }
+        mergedMap.set(item.id, item);
+        localUpdatedCount++;
       } else {
         const cloudTime = cloudItem.last_updated || cloudItem.timestamp || cloudItem.created_at || 0;
-        const localTime = localItem.last_updated || localItem.timestamp || localItem.created_at || 0;
-        
-        if (cloudTime > localTime) {
-          mergedMap.set(cloudItem.id, cloudItem);
-          updatedFromCloudCount++;
-        } else if (localTime > cloudTime) {
+        if (localTime > cloudTime) {
+          mergedMap.set(item.id, item);
           localUpdatedCount++;
+        } else if (cloudTime > localTime) {
+          updatedFromCloudCount++;
         }
       }
     });
+
+    newFromCloudCount = cloudItems.length - (mergedMap.size - localUpdatedCount);
 
     const mergedList = Array.from(mergedMap.values());
     
@@ -2014,9 +2043,10 @@ export default function App() {
 
                 <button
                   type="submit"
-                  className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
+                  disabled={isSyncing}
+                  className={`w-full ${isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-forest-600 hover:bg-forest-700'} text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5`}
                 >
-                  {lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)'}
+                  {isSyncing ? '🔄 सिंक करत आहे (Syncing...)' : (lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)')}
                 </button>
 
                 <div className="flex justify-center pt-1">
@@ -2163,6 +2193,28 @@ export default function App() {
               </div>
             </div>
 
+            {/* Cloud Setup for New Devices */}
+            <div className="pt-4 border-t border-gray-100 text-center">
+              <button 
+                onClick={() => {
+                  const url = prompt("Enter Master Supabase URL (मास्टर युआरएल):");
+                  const key = prompt("Enter Master Supabase Anon Key (मास्टर की):");
+                  if(url && key) {
+                    localStorage.setItem('master_sb_url', url);
+                    localStorage.setItem('master_sb_key', key);
+                    alert("क्रेडेंशियल्स सेव्ह झाले! ऑनलाइन डेटा सिंक होण्यासाठी पेज रीलोड करत आहे... (Credentials Saved! Reloading to sync data...)");
+                    window.location.reload();
+                  }
+                }}
+                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 tracking-wide bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-1 mx-auto w-full"
+              >
+                <span className="text-sm">☁️</span> जुना डेटा मिळवण्यासाठी क्लाउड कनेक्ट करा (Link Cloud Data)
+              </button>
+              <p className="text-[9px] text-gray-400 mt-2 leading-tight">
+                तुम्ही दुसऱ्या डिव्हाइसवरून लॉगिन करत असल्यास, तुमचे डेटा मिळवण्यासाठी वरील पर्यायाचा वापर करा. किंवा AI Studio च्या Secrets मध्ये VITE_MASTER_SB_URL सेट करा.
+              </p>
+            </div>
+
           </div>
         </div>
       </div>
@@ -2285,6 +2337,21 @@ export default function App() {
                       onChange={(e) => {
                         const targetShopId = e.target.value;
                         setCurrentShopId(targetShopId);
+                        
+                        const myShop = shops.find(s => s.id === targetShopId);
+                        if (myShop && myShop.sbUrl && myShop.sbKey) {
+                          setSbUrl(myShop.sbUrl);
+                          setSbKey(myShop.sbKey);
+                          localStorage.setItem('sb_url', myShop.sbUrl);
+                          localStorage.setItem('sb_key', myShop.sbKey);
+                        } else {
+                          // Clear if not set
+                          setSbUrl('');
+                          setSbKey('');
+                          localStorage.removeItem('sb_url');
+                          localStorage.removeItem('sb_key');
+                        }
+                        
                         addAuditLog(`मास्टर अॅडमीनने दुकान संदर्भ ${targetShopId} वर बदलला`);
                       }}
                       className="bg-purple-50 hover:bg-purple-100 border-2 border-purple-200 text-purple-950 font-black text-sm sm:text-base py-1.5 px-4 rounded-xl transition-all cursor-pointer shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-400 max-w-xs"
