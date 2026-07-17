@@ -303,7 +303,7 @@ export default function App() {
         whatsNo: "9876543210",
         upiId: "maulicloth@oksbi",
         gstNumber: "२७एएएसीएफ१२३४ए१जेड५",
-        created_at: Date.now()
+        created_at: 0 // Use 0 so cloud sync always overwrites this local mock on a new device
       }
     ];
     localStorage.setItem('t_shops', JSON.stringify(initial));
@@ -319,7 +319,8 @@ export default function App() {
         username: "master",
         password: "master123",
         role: "MASTER_ADMIN",
-        shopId: null
+        shopId: null,
+        last_updated: 0
       },
       {
         id: "user-mauli",
@@ -327,7 +328,8 @@ export default function App() {
         password: "admin123",
         role: "SHOP_ADMIN",
         shopId: "shop-mauli",
-        email: "admin@mauli.com"
+        email: "admin@mauli.com",
+        last_updated: 0
       },
       {
         id: "user-emp",
@@ -335,7 +337,8 @@ export default function App() {
         password: "emp123",
         role: "EMPLOYEE",
         shopId: "shop-mauli",
-        email: "emp@mauli.com"
+        email: "emp@mauli.com",
+        last_updated: 0
       }
     ];
     localStorage.setItem('t_users', JSON.stringify(initial));
@@ -370,8 +373,8 @@ export default function App() {
   const [isMasterSbUnlocked, setIsMasterSbUnlocked] = useState<boolean>(false);
 
   // Master Admin Separate Supabase States
-  const [masterSbUrl, setMasterSbUrl] = useState(() => localStorage.getItem('master_sb_url') || '');
-  const [masterSbKey, setMasterSbKey] = useState(() => localStorage.getItem('master_sb_key') || '');
+  const [masterSbUrl, setMasterSbUrl] = useState(() => import.meta.env.VITE_MASTER_SB_URL || import.meta.env.VITE_SUPABASE_URL || localStorage.getItem('master_sb_url') || '');
+  const [masterSbKey, setMasterSbKey] = useState(() => import.meta.env.VITE_MASTER_SB_KEY || import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.VITE_SUPABASE_KEY || localStorage.getItem('master_sb_key') || '');
   const [masterSupabaseClient, setMasterSupabaseClient] = useState<SupabaseClient | null>(null);
 
   // Email OTP Password Reset States
