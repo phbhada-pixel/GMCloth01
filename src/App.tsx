@@ -586,6 +586,18 @@ export default function App() {
         const copy = { ...item };
         if (tableName !== 't_shops' && tableName !== 't_user_accounts') {
           copy.shop_id = currentShopId;
+        } else if (tableName === 't_shops') {
+          // Map properties to match Supabase table schema
+          copy.sb_url = copy.sbUrl || null;
+          copy.sb_key = copy.sbKey || null;
+          delete copy.sbUrl;
+          delete copy.sbKey;
+        } else if (tableName === 't_user_accounts') {
+          // ShopId is camelCase in local state but could be quote-wrapped in SQL, but SQL has "shopId" (quoted)
+          // Also strip last_updated, email, session_token as they are not in the basic SQL schema
+          delete copy.last_updated;
+          delete copy.email;
+          delete copy.session_token;
         }
         return copy;
       });
@@ -1145,6 +1157,14 @@ export default function App() {
       if (error) {
         console.error(`Fetch error for ${tableName}:`, error);
         return null;
+      }
+      if (tableName === 't_shops' && data) {
+        return data.map(item => {
+          const copy = { ...item };
+          if (copy.sb_url) { copy.sbUrl = copy.sb_url; delete copy.sb_url; }
+          if (copy.sb_key) { copy.sbKey = copy.sb_key; delete copy.sb_key; }
+          return copy;
+        });
       }
       return data;
     } catch (err) {
