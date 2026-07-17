@@ -272,8 +272,8 @@ const INITIAL_SALES: Sale[] = [
 
 // MASTER SUPABASE CONFIGURATION
 // Replace these with your actual Master Supabase URL and Key
-const HARDCODED_MASTER_SB_URL = "https://fxfjnrvbyqhmrllexljo.supabase.co";
-const HARDCODED_MASTER_SB_KEY = "sb_publishable_txQ_Rra5LY2QjblbFf2AAg_vhCwylAU";
+const HARDCODED_MASTER_SB_URL: string = "YOUR_MASTER_SUPABASE_URL_HERE";
+const HARDCODED_MASTER_SB_KEY: string = "YOUR_MASTER_SUPABASE_ANON_KEY_HERE";
 
 export default function App() {
   // Authentication & Configuration State
