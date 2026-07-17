@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   ShoppingBag, 
   Boxes, 
@@ -360,6 +360,7 @@ export default function App() {
   });
 
   // Supabase Integration Setup
+  const appStateRef = useRef<any>({});
   const [sbUrl, setSbUrl] = useState(() => localStorage.getItem('sb_url') || '');
   const [sbKey, setSbKey] = useState(() => localStorage.getItem('sb_key') || '');
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null);
@@ -561,6 +562,39 @@ export default function App() {
       setMasterSupabaseClient(null);
     }
   }, [masterSbUrl, masterSbKey]);
+
+  // Auto-pull from Master on fresh device
+  useEffect(() => {
+    if (masterSupabaseClient && shops.length === 1 && shops[0].id === 'shop-mauli') {
+      const autoPull = async () => {
+        try {
+          console.log("Fresh device detected. Auto-pulling master data...");
+          const { data: cloudShops, error: errShops } = await masterSupabaseClient.from('t_shops').select('*');
+          const { data: cloudUsers, error: errUsers } = await masterSupabaseClient.from('t_user_accounts').select('*');
+          
+          if (!errShops && !errUsers) {
+            if (cloudShops && cloudShops.length > 0) {
+               const mappedShops = cloudShops.map(item => {
+                  const copy = { ...item };
+                  if (copy.sb_url) { copy.sbUrl = copy.sb_url; delete copy.sb_url; }
+                  if (copy.sb_key) { copy.sbKey = copy.sb_key; delete copy.sb_key; }
+                  return copy;
+               });
+               setShops(mappedShops);
+               localStorage.setItem('t_shops', JSON.stringify(mappedShops));
+            }
+            if (cloudUsers && cloudUsers.length > 0) {
+               setUsers(cloudUsers);
+               localStorage.setItem('t_users', JSON.stringify(cloudUsers));
+            }
+            console.log("Auto-pull complete!");
+          }
+        } catch(e) {}
+      };
+      autoPull();
+    }
+  }, [masterSupabaseClient, shops]);
+
 
   // Helper to upload a list to Supabase
   const uploadTableToSupabase = async (tableName: string, dataArray: any[], forceUseMaster: boolean = false) => {
@@ -1257,8 +1291,8 @@ export default function App() {
       setIsSyncing(true);
       setSyncLogs(["🔄 मास्टर क्लाउड द्विमार्गी स्मार्ट सिंक्रोनाइझेशन सुरू...", "दुकाने आणि सर्व युजर्स खाती सिंक केली जात आहेत..."]);
       try {
-        await smartSyncTable('t_shops', shops, setShops, 't_shops');
-        await smartSyncTable('t_user_accounts', users, setUsers, 't_users');
+        await smartSyncTable('t_shops', appStateRef.current.shops, setShops, 't_shops');
+        await smartSyncTable('t_user_accounts', appStateRef.current.users, setUsers, 't_users');
         setSyncLogs(prev => [...prev, "🎉 मास्टर डेटा यशस्वीरित्या सिंक झाला!"]);
         addAuditLog("मास्टर क्लाउड डेटा सिंक पूर्ण केला");
         alert("मास्टर सिंक्रोनाइझेशन यशस्वीरित्या पूर्ण झाले! 🎉");
@@ -1282,25 +1316,25 @@ export default function App() {
     
     try {
       // 1. Sync user accounts (staff belonging to this shop)
-      await smartSyncTable('t_user_accounts', users, setUsers, 't_users');
+      await smartSyncTable('t_user_accounts', appStateRef.current.users, setUsers, 't_users');
 
       // 2. Sync products
-      await smartSyncTable('t_products', products, setProducts, 't_products_' + currentShopId);
+      await smartSyncTable('t_products', appStateRef.current.products, setProducts, 't_products_' + currentShopId);
 
       // 3. Sync customers
-      await smartSyncTable('t_customers', customers, setCustomers, 't_customers_' + currentShopId);
+      await smartSyncTable('t_customers', appStateRef.current.customers, setCustomers, 't_customers_' + currentShopId);
 
       // 4. Sync suppliers
-      await smartSyncTable('t_suppliers', suppliers, setSuppliers, 't_suppliers_' + currentShopId);
+      await smartSyncTable('t_suppliers', appStateRef.current.suppliers, setSuppliers, 't_suppliers_' + currentShopId);
 
       // 5. Sync sales
-      await smartSyncTable('t_sales', sales, setSales, 't_sales_' + currentShopId);
+      await smartSyncTable('t_sales', appStateRef.current.sales, setSales, 't_sales_' + currentShopId);
 
       // 6. Sync purchases
-      await smartSyncTable('t_purchases', purchases, setPurchases, 't_purchases_' + currentShopId);
+      await smartSyncTable('t_purchases', appStateRef.current.purchases, setPurchases, 't_purchases_' + currentShopId);
 
       // 7. Sync audit logs
-      await smartSyncTable('t_audit_logs', auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId);
+      await smartSyncTable('t_audit_logs', appStateRef.current.auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId);
 
       setSyncLogs(prev => [...prev, "🎉 अभिनंदन! सर्व टेबल्स क्लाउड डेटाबेससह यशस्वीरित्या सिंक झाली आहेत."]);
       addAuditLog("Supabase डेटाबेसशी स्मार्ट सिंक पूर्ण केले");
@@ -1410,8 +1444,8 @@ export default function App() {
       // 1. Sync master tables if master database is configured
       if (masterSbUrl && masterSbKey) {
         try {
-          await smartSyncTable('t_shops', shops, setShops, 't_shops', true);
-          await smartSyncTable('t_user_accounts', users, setUsers, 't_users', true);
+          await smartSyncTable('t_shops', appStateRef.current.shops, setShops, 't_shops', true);
+          await smartSyncTable('t_user_accounts', appStateRef.current.users, setUsers, 't_users', true);
           syncDone = true;
         } catch (err) {
           console.warn("Silent master sync failed:", err);
@@ -1423,14 +1457,14 @@ export default function App() {
       if (!isMaster && sbUrl && sbKey) {
         try {
           if (!masterSbUrl || !masterSbKey) {
-            await smartSyncTable('t_user_accounts', users, setUsers, 't_users', false);
+            await smartSyncTable('t_user_accounts', appStateRef.current.users, setUsers, 't_users', false);
           }
-          await smartSyncTable('t_products', products, setProducts, 't_products_' + currentShopId, false);
-          await smartSyncTable('t_customers', customers, setCustomers, 't_customers_' + currentShopId, false);
-          await smartSyncTable('t_suppliers', suppliers, setSuppliers, 't_suppliers_' + currentShopId, false);
-          await smartSyncTable('t_sales', sales, setSales, 't_sales_' + currentShopId, false);
-          await smartSyncTable('t_purchases', purchases, setPurchases, 't_purchases_' + currentShopId, false);
-          await smartSyncTable('t_audit_logs', auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId, false);
+          await smartSyncTable('t_products', appStateRef.current.products, setProducts, 't_products_' + currentShopId, false);
+          await smartSyncTable('t_customers', appStateRef.current.customers, setCustomers, 't_customers_' + currentShopId, false);
+          await smartSyncTable('t_suppliers', appStateRef.current.suppliers, setSuppliers, 't_suppliers_' + currentShopId, false);
+          await smartSyncTable('t_sales', appStateRef.current.sales, setSales, 't_sales_' + currentShopId, false);
+          await smartSyncTable('t_purchases', appStateRef.current.purchases, setPurchases, 't_purchases_' + currentShopId, false);
+          await smartSyncTable('t_audit_logs', appStateRef.current.auditLogs, setAuditLogs, 't_audit_logs_' + currentShopId, false);
           syncDone = true;
         } catch (err) {
           console.warn("Silent shop sync failed:", err);
@@ -1450,6 +1484,10 @@ export default function App() {
       setIsSyncing(false);
     }
   };
+
+  useEffect(() => {
+    appStateRef.current = { shops, users, products, customers, suppliers, sales, purchases, auditLogs };
+  }, [shops, users, products, customers, suppliers, sales, purchases, auditLogs]);
 
   // Manage Online/Offline Transition and Sync triggers
   useEffect(() => {
@@ -1495,7 +1533,7 @@ export default function App() {
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);
     };
-  }, [sbUrl, sbKey, currentShopId, shops, users, products, customers, suppliers, sales, purchases, auditLogs]);
+  }, [sbUrl, sbKey, masterSbUrl, masterSbKey, currentShopId, autoSync]); // Removed data dependencies to prevent infinite loop
 
   // Active session checker (Single Session Enforcement)
   useEffect(() => {
@@ -1783,7 +1821,7 @@ export default function App() {
     }
 
     // Check if currently locked
-    const hasSbCreds = !!localStorage.getItem('sb_url_' + currentShopId) && !!localStorage.getItem('sb_key_' + currentShopId);
+    const hasSbCreds = !!sbUrl && !!sbKey;
     const isLocked = hasSbCreds && !isShopSbUnlocked;
     if (isLocked && role !== 'MASTER_ADMIN') {
       alert("⚠️ क्रेडेंशियल्स आधीपासूनच सेव्ह करून लॉक केलेले आहेत! बदल करण्यासाठी आधी 'अनलॉक करा' बटणावर क्लिक करा.");
@@ -2068,10 +2106,9 @@ export default function App() {
 
                 <button
                   type="submit"
-                  disabled={isSyncing}
-                  className={`w-full ${isSyncing ? 'bg-gray-400 cursor-not-allowed' : 'bg-forest-600 hover:bg-forest-700'} text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5`}
+                  className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
                 >
-                  {isSyncing ? '🔄 सिंक करत आहे (Syncing...)' : (lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)')}
+                  {lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)'}
                 </button>
 
                 <div className="flex justify-center pt-1">
@@ -2142,29 +2179,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Cloud Setup for New Devices */}
-            <div className="pt-4 border-t border-gray-100 text-center">
-              <button 
-                onClick={() => {
-                  const url = prompt("Enter Master Supabase URL (मास्टर युआरएल):");
-                  const key = prompt("Enter Master Supabase Anon Key (मास्टर की):");
-                  if(url && key) {
-                    localStorage.setItem('master_sb_url', url);
-                    localStorage.setItem('master_sb_key', key);
-                    alert("क्रेडेंशियल्स सेव्ह झाले! ऑनलाइन डेटा सिंक होण्यासाठी पेज रीलोड करत आहे... (Credentials Saved! Reloading to sync data...)");
-                    window.location.reload();
-                  }
-                }}
-                className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 tracking-wide bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-lg border border-indigo-100 transition-all active:scale-95 flex items-center justify-center gap-1 mx-auto w-full"
-              >
-                <span className="text-sm">☁️</span> जुना डेटा मिळवण्यासाठी क्लाउड कनेक्ट करा (Link Cloud Data)
-              </button>
-              <p className="text-[9px] text-gray-400 mt-2 leading-tight">
-                तुम्ही दुसऱ्या डिव्हाइसवरून लॉगिन करत असल्यास, तुमचे डेटा मिळवण्यासाठी वरील पर्यायाचा वापर करा. किंवा AI Studio च्या Secrets मध्ये VITE_MASTER_SB_URL सेट करा.
-              </p>
             </div>
-
-          </div>
         </div>
       </div>
     );
@@ -3717,7 +3732,7 @@ export default function App() {
 
                 {/* TAB 1: STATUS & OPERATIONS */}
                 {sbSubTab === 'status' && (() => {
-                  const hasSbSaved = (!!localStorage.getItem('sb_url_' + currentShopId) && !!localStorage.getItem('sb_key_' + currentShopId));
+                  const hasSbSaved = !!sbUrl && !!sbKey;
                   const isSbLocked = hasSbSaved && !isShopSbUnlocked;
                   return (
                     <div className="space-y-4">
@@ -3735,6 +3750,13 @@ export default function App() {
                             </span>
                           )}
                         </div>
+                        {isSbLocked ? (
+                          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                            <h5 className="font-extrabold text-green-800 text-sm mb-1">✅ दुकान क्लाउड कनेक्टेड आहे</h5>
+                            <p className="text-[10px] text-green-700 mb-3">या दुकानाचा डेटा क्लाउडवर सुरक्षितपणे सिंक्रोनाइझ होत आहे.</p>
+                            <button onClick={() => setIsShopSbUnlocked(true)} className="bg-white border border-green-200 text-green-700 font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-green-100 transition-all">बदला (Change)</button>
+                          </div>
+                        ) : (
                         <form onSubmit={handleSaveSbConfig} className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                           <div className="space-y-1">
                             <label className="font-bold text-gray-600 block flex items-center gap-1">
@@ -3806,6 +3828,7 @@ export default function App() {
                           )}
                         </div>
                       </form>
+                      )} {/* END SHOP COLLAPSE */}
                     </div>
 
                     {/* Sync Actions (Active only if connected) */}
@@ -4495,7 +4518,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
 
                 {/* TAB 1: STATUS & OPERATIONS */}
                 {masterSbSubTab === 'status' && (() => {
-                  const hasMasterSbSaved = !!localStorage.getItem('master_sb_url') && !!localStorage.getItem('master_sb_key');
+                  const hasMasterSbSaved = !!masterSbUrl && !!masterSbKey;
                   const isMasterSbLocked = hasMasterSbSaved && !isMasterSbUnlocked;
                   return (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
@@ -4514,7 +4537,16 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                             </span>
                           )}
                         </div>
+                        
+                        {isMasterSbLocked ? (
+                          <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+                            <h5 className="font-extrabold text-green-800 text-sm mb-1">✅ मास्टर क्लाउड कनेक्टेड आहे</h5>
+                            <p className="text-[10px] text-green-700 mb-3">सर्व दुकाने आणि युजर्सचा डेटा या मास्टर डेटाबेसमध्ये सुरक्षित आहे.</p>
+                            <button onClick={() => setIsMasterSbUnlocked(true)} className="bg-white border border-green-200 text-green-700 font-bold px-3 py-1.5 rounded-lg text-xs hover:bg-green-100 transition-all">बदला (Change)</button>
+                          </div>
+                        ) : (
                         <div className="grid grid-cols-1 gap-2.5 text-xs">
+
                           <div className="space-y-1">
                             <label className="font-bold text-gray-500 block">Master Supabase Project URL</label>
                             <input 
@@ -4581,6 +4613,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                             )}
                           </div>
                         </div>
+                        )} /* END MASTER COLLAPSE */
                       </div>
 
                       <div className="flex flex-col justify-between p-4 bg-purple-50/40 rounded-2xl border border-purple-100">
