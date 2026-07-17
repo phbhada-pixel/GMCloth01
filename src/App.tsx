@@ -1256,6 +1256,92 @@ export default function App() {
     }
   };
 
+  // Manual Backup: Download local storage as JSON
+  const handleManualBackup = () => {
+    try {
+      const backupData: Record<string, string | null> = {};
+      
+      if (role === 'MASTER_ADMIN') {
+        // Master admin backs up everything
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            backupData[key] = localStorage.getItem(key);
+          }
+        }
+      } else {
+        // Shop admin backs up only their shop's data and global settings
+        const globalKeys = ['t_role', 't_lang', 'current_shop_id', 't_active_user'];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) {
+            if (globalKeys.includes(key) || key.includes(currentShopId)) {
+               backupData[key] = localStorage.getItem(key);
+            }
+          }
+        }
+      }
+
+      const jsonString = JSON.stringify(backupData, null, 2);
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `backup_${role === 'MASTER_ADMIN' ? 'master' : currentShopId}_${new Date().toISOString().slice(0,10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      addAuditLog("स्थानिक डेटाचा मॅन्युअल बॅकअप डाउनलोड केला");
+      alert("✅ यशस्वीरित्या बॅकअप डाउनलोड झाला! (Backup Downloaded Successfully)");
+    } catch (err) {
+      console.error(err);
+      alert("❌ बॅकअप घेण्यात अडचण आली!");
+    }
+  };
+
+  // Manual Restore: Load JSON file into local storage
+  const handleManualRestore = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!confirm("⚠️ सावधान! या फाईलमधील डेटा सध्याच्या डेटाला ओव्हरराईट करेल. तुम्हाला सुरू ठेवायचे आहे का?")) {
+      event.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const backupData = JSON.parse(content);
+        
+        // Safety check to ensure it's a valid backup object
+        if (typeof backupData !== 'object' || Array.isArray(backupData)) {
+          throw new Error("Invalid backup format");
+        }
+
+        for (const key in backupData) {
+          if (backupData.hasOwnProperty(key)) {
+            const val = backupData[key];
+            if (val !== null && typeof val === 'string') {
+              localStorage.setItem(key, val);
+            }
+          }
+        }
+        
+        alert("✅ बॅकअप यशस्वीरित्या रिस्टोर झाला! अॅप आता रीस्टार्ट होईल.");
+        window.location.reload();
+      } catch (err) {
+        console.error(err);
+        alert("❌ बॅकअप फाईल अवैध आहे किंवा वाचता आली नाही!");
+      }
+    };
+    reader.readAsText(file);
+    event.target.value = '';
+  };
+
   // Silent auto-sync for background synchronization
   const silentSmartSync = async () => {
     if (isSyncing || !navigator.onLine) return;
@@ -3671,6 +3757,43 @@ export default function App() {
                         <p className="text-amber-700">तुमचा डेटा सध्या सुरक्षित राहण्यासाठी स्थानिक मेमरीमध्ये साठवला जात आहे. क्लाउड बॅकअप सुरू करण्यासाठी वर Supabase प्रोजेक्ट URL आणि Anon Key भरून "क्रेडेंशियल्स जतन करा" वर क्लिक करा.</p>
                       </div>
                     )}
+                    
+                    {/* Manual Force Backup Section */}
+                    <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs space-y-3 mt-4">
+                      <div className="flex items-start gap-2">
+                        <span className="text-xl">💽</span>
+                        <div>
+                          <h4 className="font-extrabold text-gray-800">स्थानिक डेटा मॅन्युअल बॅकअप (Manual Backup & Restore)</h4>
+                          <p className="text-[10px] text-gray-500 mt-0.5">जर क्लाउड सिंक काम करत नसेल किंवा इंटरनेट नसेल, तर तुम्ही तुमच्या डेटाचा सुरक्षित JSON फाईलमध्ये बॅकअप घेऊ शकता.</p>
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                        <button
+                          onClick={handleManualBackup}
+                          className="bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 shadow-sm transition-all"
+                        >
+                          <span className="text-lg">⬇️</span>
+                          <span>बॅकअप डाउनलोड करा</span>
+                          <span className="text-[9px] text-gray-400 font-medium">(Download JSON Backup)</span>
+                        </button>
+                        
+                        <div className="relative">
+                          <input 
+                            type="file" 
+                            accept=".json" 
+                            onChange={handleManualRestore}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                          />
+                          <div className="bg-white border-2 border-dashed border-gray-300 hover:border-gray-400 text-gray-700 h-full p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 transition-all">
+                            <span className="text-lg">⬆️</span>
+                            <span>फाईलमधून रिस्टोर करा</span>
+                            <span className="text-[9px] text-gray-400 font-medium">(Restore from JSON)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
                 )})()}
 
@@ -4404,6 +4527,43 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                           </button>
                         </div>
                       </div>
+                      
+                      {/* Manual Force Backup Section (Master Admin) */}
+                      <div className="md:col-span-2 bg-gray-50 border border-gray-200 rounded-2xl p-4 text-xs space-y-3 mt-2">
+                        <div className="flex items-start gap-2">
+                          <span className="text-xl">💽</span>
+                          <div>
+                            <h4 className="font-extrabold text-gray-800">संपूर्ण मास्टर डेटा मॅन्युअल बॅकअप (Full Master Backup & Restore)</h4>
+                            <p className="text-[10px] text-gray-500 mt-0.5">येथून डाउनलोड केलेला बॅकअप तुमच्या ब्राउझरमधील सर्व दुकाने, युजर्स आणि मास्टर सेटिंग्जसह *संपूर्ण* स्थानिक मेमरी जतन करेल.</p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
+                          <button
+                            onClick={handleManualBackup}
+                            className="bg-gray-800 hover:bg-gray-900 text-white p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 shadow-sm transition-all"
+                          >
+                            <span className="text-lg">⬇️</span>
+                            <span>संपूर्ण बॅकअप डाउनलोड करा</span>
+                            <span className="text-[9px] text-gray-400 font-medium">(Download All App Data)</span>
+                          </button>
+                          
+                          <div className="relative">
+                            <input 
+                              type="file" 
+                              accept=".json" 
+                              onChange={handleManualRestore}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            />
+                            <div className="bg-white border-2 border-dashed border-gray-300 hover:border-gray-400 text-gray-700 h-full p-3 rounded-xl font-bold flex flex-col items-center justify-center gap-1 transition-all">
+                              <span className="text-lg">⬆️</span>
+                              <span>फाईलमधून सर्व डेटा रिस्टोर करा</span>
+                              <span className="text-[9px] text-gray-400 font-medium">(Restore Full Local Storage)</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
                     </div>
                   );
                 })()}
