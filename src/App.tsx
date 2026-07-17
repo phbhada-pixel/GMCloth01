@@ -1150,8 +1150,8 @@ export default function App() {
       if (tableName !== 't_shops' && tableName !== 't_user_accounts') {
         query = query.eq('shop_id', currentShopId);
       } else if (tableName === 't_user_accounts' && role !== 'MASTER_ADMIN') {
-        // Shop admin only downloads users for their shop!
-        query = query.eq('shopId', currentShopId);
+        // Shop admin (or logged out) downloads users for their shop + master admins
+        query = query.or(`shopId.eq.${currentShopId},role.eq.MASTER_ADMIN`);
       }
       const { data, error } = await query;
       if (error) {
@@ -2090,83 +2090,7 @@ export default function App() {
               </form>
             )}
 
-            {/* Master Cloud Recovery Section */}
-            <div className="pt-3 border-t border-gray-100">
-              <details className="group">
-                <summary className="flex items-center justify-between cursor-pointer p-2 rounded-xl hover:bg-indigo-50/50 text-indigo-700 font-extrabold text-[10px] uppercase tracking-wider select-none">
-                  <span>☁️ मास्टर क्लाउड सिंक सेटअप (New Device Setup)</span>
-                  <span className="transition-transform group-open:rotate-180">▼</span>
-                </summary>
-                <div className="p-3 bg-indigo-50/30 rounded-xl border border-indigo-100 mt-2 space-y-3 text-xs">
-                  <p className="text-[10px] text-indigo-900 leading-relaxed">
-                    नवीन साधनावर (New Device) पहिल्यांदा लॉगिन करत असल्यास, खाली तुमचे मास्टर Supabase क्रेडेंशियल्स टाका आणि मास्टर डेटा स्थानिक पातळीवर ओढून घ्या.
-                  </p>
-                  
-                  <div className="space-y-2">
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-700 block">Master Supabase Project URL</label>
-                      <input 
-                        type="text" 
-                        placeholder="https://your-master-project.supabase.co" 
-                        value={masterSbUrl}
-                        onChange={(e) => {
-                          setMasterSbUrl(e.target.value);
-                          localStorage.setItem('master_sb_url', e.target.value);
-                        }}
-                        className="w-full border border-indigo-200 p-2 rounded-lg font-mono text-[10px] bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[9px] font-black text-indigo-700 block">Master Supabase Anon Key</label>
-                      <input 
-                        type="password" 
-                        placeholder="eyJhbGciOi..." 
-                        value={masterSbKey}
-                        onChange={(e) => {
-                          setMasterSbKey(e.target.value);
-                          localStorage.setItem('master_sb_key', e.target.value);
-                        }}
-                        className="w-full border border-indigo-200 p-2 rounded-lg font-mono text-[10px] bg-white text-gray-800 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        if (!masterSbUrl || !masterSbKey) {
-                          alert("❌ कृपया मास्टर Supabase प्रोजेक्ट URL आणि Anon Key भरा!");
-                          return;
-                        }
-                        try {
-                          const client = createClient(masterSbUrl, masterSbKey);
-                          const { data: cloudShops, error: errShops } = await client.from('t_shops').select('*');
-                          const { data: cloudUsers, error: errUsers } = await client.from('t_user_accounts').select('*');
 
-                          if (errShops || errUsers) {
-                            alert(`❌ डेटाबेसवरून माहिती मिळवता आली नाही: ${errShops?.message || errUsers?.message}\n(कृपया खात्री करा की तुमच्या Supabase मध्ये 't_shops' आणि 't_user_accounts' टेबल्स तयार आहेत)`);
-                            return;
-                          }
-
-                          if (cloudShops) {
-                            setShops(cloudShops);
-                            localStorage.setItem('t_shops', JSON.stringify(cloudShops));
-                          }
-                          if (cloudUsers) {
-                            setUsers(cloudUsers);
-                            localStorage.setItem('t_users', JSON.stringify(cloudUsers));
-                          }
-                          alert("🎉 मास्टर डेटाबेस यशस्वीरित्या जोडला गेला! सर्व दुकाने आणि युजर्सचे पासवर्ड सिंक झाले आहेत. आता तुम्ही योग्य पासवर्डने लॉगिन करू शकता.");
-                        } catch (err: any) {
-                          alert(`❌ डाउनलोड अयशस्वी: ${err?.message}`);
-                        }
-                      }}
-                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-black py-2 rounded-lg text-[10px] uppercase transition-colors shadow-sm flex items-center justify-center gap-1"
-                    >
-                      📥 क्लाउडवरून मास्टर डेटा ओढा (Pull Master Data)
-                    </button>
-                  </div>
-                </div>
-              </details>
-            </div>
 
             {/* Quick Demo logins section */}
             <div className="pt-3 border-t border-gray-100">
