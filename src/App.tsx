@@ -2211,6 +2211,33 @@ export default function App() {
     CREDIT: sales.filter(s => s.payment_mode === 'CREDIT').reduce((sum, s) => sum + s.grand_total, 0),
   };
 
+  const currentShopData = shops.find(s => s.id === currentShopId);
+  const isLicenseExpired = currentShopData && (currentShopData.license_status === 'EXPIRED' || currentShopData.license_status === 'SUSPENDED') && role !== 'MASTER_ADMIN';
+
+  if (isLicenseExpired) {
+    return (
+      <div className="min-h-screen bg-[#F9F9F6] flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-red-100 overflow-hidden text-center">
+          <div className="bg-gradient-to-br from-red-500 to-red-600 p-6 text-white text-center relative">
+            <span className="text-4xl">🛑</span>
+            <h1 className="mt-3 text-xl font-bold tracking-tight">परवाना निलंबित / कालबाह्य</h1>
+            <p className="text-xs opacity-90 mt-1">(License Blocked)</p>
+          </div>
+          <div className="p-6 space-y-4">
+            <p className="text-sm font-bold text-gray-800">तुमच्या दुकानाचा परवाना सध्या {currentShopData.license_status === 'EXPIRED' ? 'कालबाह्य (EXPIRED)' : 'निलंबित (SUSPENDED)'} आहे.</p>
+            <p className="text-xs text-gray-500">कृपया सेवा पुन्हा सुरू करण्यासाठी आणि डेटा ऍक्सेस मिळवण्यासाठी मास्टर ॲडमिनशी संपर्क साधा.</p>
+            <button
+               onClick={handleLogout}
+               className="mt-4 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition-all active:scale-95"
+            >
+               लॉग आऊट (Log Out)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-[#F9F9F6] flex flex-col pb-16 md:pb-0 ${isLargeFont ? 'large-text-mode' : ''}`}>
       {/* Dynamic Sync Toast Notification */}
@@ -3902,7 +3929,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4026,7 +4055,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4676,7 +4707,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4704,7 +4737,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4753,7 +4788,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4877,7 +4914,9 @@ CREATE TABLE IF NOT EXISTS t_shops (
   "gstNumber" TEXT,
   created_at BIGINT NOT NULL,
   sb_url TEXT,
-  sb_key TEXT
+  sb_key TEXT,
+  license_status TEXT DEFAULT 'ACTIVE',
+  license_expiry_date BIGINT
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -5208,21 +5247,51 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                         return (
                           <div 
                             key={s.id} 
-                            className="p-5 rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50/50 to-indigo-50/20 flex items-center justify-between shadow-sm hover:shadow-md transition-all"
+                            className="p-5 rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50/50 to-indigo-50/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-sm hover:shadow-md transition-all"
                           >
                             <div className="flex items-center gap-3.5">
-                              <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xl shadow-inner">
+                              <div className="w-12 h-12 rounded-2xl bg-purple-100 text-purple-700 flex items-center justify-center font-black text-xl shadow-inner shrink-0">
                                 🏬
                               </div>
                               <div>
                                 <h4 className="font-extrabold text-purple-950 text-sm tracking-tight">{s.name}</h4>
                                 <p className="text-[10px] text-purple-700 font-semibold flex items-center gap-1 mt-0.5">
-                                  <span>🔒</span> डेटा सुरक्षितता सक्रिय (Data Security Lock Active)
+                                  <span>🔒</span> {s.address}
                                 </p>
                               </div>
                             </div>
-                            <div className="bg-emerald-50 text-emerald-800 border border-emerald-100 px-3 py-1 rounded-full text-[10px] font-black">
-                              🟢 सक्रीय भाडेकरू (Active Tenant)
+                            <div className="flex flex-col items-end gap-2 shrink-0">
+                              <select 
+                                value={s.license_status || 'ACTIVE'}
+                                onChange={(e) => {
+                                  const status = e.target.value as any;
+                                  const updated = shops.map(shop => shop.id === s.id ? { ...shop, license_status: status } : shop);
+                                  setShops(updated);
+                                  localStorage.setItem('t_shops', JSON.stringify(updated));
+                                  if (masterSbUrl && masterSbKey) uploadTableToSupabase('t_shops', updated);
+                                }}
+                                className={`text-xs font-black px-2 py-1 rounded border outline-none ${s.license_status === 'EXPIRED' ? 'bg-red-50 text-red-800 border-red-200' : s.license_status === 'SUSPENDED' ? 'bg-yellow-50 text-yellow-800 border-yellow-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}
+                              >
+                                <option value="ACTIVE">🟢 ACTIVE</option>
+                                <option value="SUSPENDED">🟠 SUSPENDED</option>
+                                <option value="EXPIRED">🔴 EXPIRED</option>
+                              </select>
+                              <div className="flex items-center gap-1">
+                                <label className="text-[9px] font-bold text-gray-500">Expiry:</label>
+                                <input 
+                                  type="date"
+                                  className="text-[10px] font-bold px-1.5 py-0.5 rounded border border-gray-200"
+                                  value={s.license_expiry_date ? new Date(s.license_expiry_date).toISOString().split('T')[0] : ''}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    const time = val ? new Date(val).getTime() : 0;
+                                    const updated = shops.map(shop => shop.id === s.id ? { ...shop, license_expiry_date: time } : shop);
+                                    setShops(updated);
+                                    localStorage.setItem('t_shops', JSON.stringify(updated));
+                                    if (masterSbUrl && masterSbKey) uploadTableToSupabase('t_shops', updated);
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
                         );

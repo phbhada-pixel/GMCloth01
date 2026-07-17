@@ -109,6 +109,8 @@ export interface Shop {
   created_at: number;
   sbUrl?: string;
   sbKey?: string;
+  license_status?: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
+  license_expiry_date?: number;
 }
 
 export interface UserAccount {
