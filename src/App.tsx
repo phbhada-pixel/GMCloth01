@@ -488,8 +488,8 @@ export default function App() {
         if (tableName !== 't_shops' && tableName !== 't_user_accounts') {
           copy.shop_id = currentShopId;
         } else if (tableName === 't_shops') {
-          copy.sb_url = copy.sbUrl || null;
-          copy.sb_key = copy.sbKey || null;
+          delete copy.sb_url;
+          delete copy.sb_key;
           delete copy.sbUrl;
           delete copy.sbKey;
           delete copy.license_status;
