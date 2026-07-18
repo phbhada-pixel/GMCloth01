@@ -488,12 +488,10 @@ export default function App() {
         if (tableName !== 't_shops' && tableName !== 't_user_accounts') {
           copy.shop_id = currentShopId;
         } else if (tableName === 't_shops') {
-          delete copy.sb_url;
-          delete copy.sb_key;
+          copy.sb_url = copy.sbUrl || null;
+          copy.sb_key = copy.sbKey || null;
           delete copy.sbUrl;
           delete copy.sbKey;
-          delete copy.license_status;
-          delete copy.license_expiry_date;
         }
         return copy;
       });
@@ -3946,7 +3944,14 @@ ALTER TABLE t_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
-ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`}
+ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+-- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+`}
                       </pre>
                       <button
                         onClick={() => {
@@ -4072,7 +4077,14 @@ ALTER TABLE t_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
-ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
+ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+-- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+`;
                           navigator.clipboard.writeText(sqlCode);
                           alert("SQL कोड यशस्वीरित्या कॉपी केला! आता तो Supabase मध्ये जाऊन पेस्ट करू शकता. 📋");
                         }}
@@ -4811,7 +4823,14 @@ ALTER TABLE t_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
-ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`}
+ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+-- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+`}
                       </pre>
                       <button
                         onClick={() => {
@@ -4937,7 +4956,14 @@ ALTER TABLE t_customers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
-ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
+ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+-- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+`;
                           navigator.clipboard.writeText(sqlCode);
                           alert("दुकान SQL कोड यशस्वीरित्या कॉपी केला! 📋");
                         }}
