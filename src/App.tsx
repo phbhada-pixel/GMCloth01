@@ -127,149 +127,6 @@ export function Barcode({ value, width = 1.3, height = 36 }: BarcodeProps) {
   );
 }
 
-// Initial Mock Data
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: "prod-1",
-    name: "पैठणी साडी - पेशवाई डिझाईन",
-    category: "साड्या (Sarees)",
-    purchase_price: 2500,
-    selling_price: 3999,
-    mrp: 4500,
-    discount: 501,
-    gst_percent: 5,
-    color: "मोरपिंखा (Peacock Green)",
-    size: "प्रमाणित (Standard)",
-    pattern: "काठपदर जरी वर्क",
-    fabric: "प्युअर सिल्क (Pure Silk)",
-    hsn_code: "5007",
-    stock_quantity: 15,
-    min_stock: 5,
-    rack_number: "A-1",
-    remarks: "लग्नसराई विशेष",
-    last_updated: Date.now()
-  },
-  {
-    id: "prod-2",
-    name: "बनारसी शालू - पारंपरिक",
-    category: "साड्या (Sarees)",
-    purchase_price: 3500,
-    selling_price: 5499,
-    mrp: 6500,
-    discount: 1001,
-    gst_percent: 5,
-    color: "लाल (Traditional Red)",
-    size: "प्रमाणित (Standard)",
-    pattern: "जरी बुट्टा",
-    fabric: "बनारसी सिल्क",
-    hsn_code: "5007",
-    stock_quantity: 8,
-    min_stock: 3,
-    rack_number: "A-2",
-    remarks: "नवरीसाठी विशेष",
-    last_updated: Date.now()
-  },
-  {
-    id: "prod-3",
-    name: "जयपुरी कुर्ती - सुती बांधणी",
-    category: "कुर्ती (Kurtis)",
-    purchase_price: 350,
-    selling_price: 699,
-    mrp: 999,
-    discount: 300,
-    gst_percent: 5,
-    color: "पिवळा (Bright Yellow)",
-    size: "XL",
-    pattern: "प्रिंटेड बांधणी",
-    fabric: "कॉटन (Pure Cotton)",
-    hsn_code: "6204",
-    stock_quantity: 25,
-    min_stock: 8,
-    rack_number: "B-3",
-    last_updated: Date.now()
-  },
-  {
-    id: "prod-4",
-    name: "डिझायनर लेहेंगा चोली - फ्लोरल",
-    category: "लेहेंगा (Lehengas)",
-    purchase_price: 4500,
-    selling_price: 7999,
-    mrp: 9500,
-    discount: 1501,
-    gst_percent: 5,
-    color: "गुलाबी (Peach Pink)",
-    size: "L",
-    pattern: "जरदोजी एम्ब्रॉयडरी",
-    fabric: "जॉर्जेट",
-    hsn_code: "6204",
-    stock_quantity: 4,
-    min_stock: 5,
-    rack_number: "Showroom-1",
-    last_updated: Date.now()
-  },
-  {
-    id: "prod-5",
-    name: "लखनवी चिकनकारी कुर्ता - पुरुषांसाठी",
-    category: "पुरुष कपडे (Menswear)",
-    purchase_price: 600,
-    selling_price: 1299,
-    mrp: 1800,
-    discount: 501,
-    gst_percent: 5,
-    color: "पांढरा (Classic White)",
-    size: "L",
-    pattern: "चिकनकारी वर्क",
-    fabric: "खादी सुती",
-    hsn_code: "6205",
-    stock_quantity: 12,
-    min_stock: 4,
-    rack_number: "C-2",
-    last_updated: Date.now()
-  }
-];
-
-const INITIAL_CUSTOMERS: Customer[] = [
-  { id: "cust-1", name: "मनिषा सचिन पाटील", mobile: "9876543210", address: "शनिवार पेठ, पुणे", outstanding_balance: 0, last_updated: Date.now() },
-  { id: "cust-2", name: "अमित भालचंद्र कुलकर्णी", mobile: "9012345678", address: "राजारामपुरी, कोल्हापूर", outstanding_balance: 1500, last_updated: Date.now() },
-  { id: "cust-3", name: "सुप्रिया विजय देशपांडे", mobile: "8888888888", address: "टीव्ही सेंटर, संभाजीनगर", outstanding_balance: 800, last_updated: Date.now() }
-];
-
-const INITIAL_SUPPLIERS: Supplier[] = [
-  { id: "supp-1", name: "कोठारी टेक्स्टाईल्स - सुरत", contact: "9999988888", gst_number: "24AAACK1234F1Z5", pending_payment: 25000, last_updated: Date.now() },
-  { id: "supp-2", name: "मुथा सिल्क हाऊस - येवला", contact: "9422001122", gst_number: "27AABCM5678Q2Z3", pending_payment: 12000, last_updated: Date.now() }
-];
-
-const INITIAL_SALES: Sale[] = [
-  {
-    id: "sale-1",
-    invoice_number: "INV-2026-001",
-    customer_id: "cust-1",
-    customer_name: "मनिषा सचिन पाटील",
-    date: Date.now() - 2 * 24 * 60 * 60 * 1000,
-    total_amount: 3999,
-    discount: 200,
-    gst_amount: 189.95,
-    grand_total: 3988.95,
-    payment_mode: "UPI",
-    payment_status: "PAID",
-    last_updated: Date.now()
-  },
-  {
-    id: "sale-2",
-    invoice_number: "INV-2026-002",
-    customer_id: "cust-2",
-    customer_name: "अमित भालचंद्र कुलकर्णी",
-    date: Date.now() - 1 * 24 * 60 * 60 * 1000,
-    total_amount: 1299,
-    discount: 0,
-    gst_amount: 64.95,
-    grand_total: 1363.95,
-    payment_mode: "CREDIT",
-    payment_status: "PENDING",
-    last_updated: Date.now()
-  }
-];
-
 // MASTER SUPABASE CONFIGURATION
 // Replace these with your actual Master Supabase URL and Key
 const HARDCODED_MASTER_SB_URL: string = "https://fxfjnrvbyqhmrllexljo.supabase.co";
@@ -300,17 +157,7 @@ export default function App() {
   const [shops, setShops] = useState<Shop[]>(() => {
     const saved = localStorage.getItem('t_shops');
     if (saved) return JSON.parse(saved);
-    const initial: Shop[] = [
-      {
-        id: "shop-mauli",
-        name: "माऊली गारमेंट्स आणि साडी सेंटर",
-        address: "मेन रोड, येवला, नाशिक - ४२३४०१",
-        whatsNo: "9876543210",
-        upiId: "maulicloth@oksbi",
-        gstNumber: "२७एएएसीएफ१२३४ए१जेड५",
-        created_at: 0 // Use 0 so cloud sync always overwrites this local mock on a new device
-      }
-    ];
+    const initial: Shop[] = [];
     localStorage.setItem('t_shops', JSON.stringify(initial));
     return initial;
   });
@@ -326,24 +173,6 @@ export default function App() {
         role: "MASTER_ADMIN",
         shopId: null,
         last_updated: 0
-      },
-      {
-        id: "user-mauli",
-        username: "mauli_admin",
-        password: "admin123",
-        role: "SHOP_ADMIN",
-        shopId: "shop-mauli",
-        email: "admin@mauli.com",
-        last_updated: 0
-      },
-      {
-        id: "user-emp",
-        username: "mauli_emp",
-        password: "emp123",
-        role: "EMPLOYEE",
-        shopId: "shop-mauli",
-        email: "emp@mauli.com",
-        last_updated: 0
       }
     ];
     localStorage.setItem('t_users', JSON.stringify(initial));
@@ -356,7 +185,7 @@ export default function App() {
   });
 
   const [currentShopId, setCurrentShopId] = useState<string>(() => {
-    return localStorage.getItem('current_shop_id') || 'shop-mauli';
+    return localStorage.getItem('current_shop_id') || '';
   });
 
   // Supabase Integration Setup
@@ -405,7 +234,7 @@ export default function App() {
   }
 
   const [lowStockNotifs, setLowStockNotifs] = useState<LowStockNotification[]>(() => {
-    const saved = localStorage.getItem('low_stock_notifs_' + (localStorage.getItem('current_shop_id') || 'shop-mauli'));
+    const saved = localStorage.getItem('low_stock_notifs_' + (localStorage.getItem('current_shop_id') || ''));
     return saved ? JSON.parse(saved) : [];
   });
   const [showNotifDropdown, setShowNotifDropdown] = useState<boolean>(false);
@@ -432,7 +261,7 @@ export default function App() {
   const [shopName, setShopName] = useState('माऊली गारमेंट्स आणि साडी सेंटर');
   const [shopAddress, setShopAddress] = useState('मेन रोड, येवला, नाशिक - ४२३४०१');
   const [gstNumber, setGstNumber] = useState('२७एएएसीएफ१२३४ए१जेड५');
-  const [upiId, setUpiId] = useState('maulicloth@oksbi');
+  const [upiId, setUpiId] = useState('');
   const [whatsNo, setWhatsNo] = useState('9876543210');
   const [showMonthlyReportPrint, setShowMonthlyReportPrint] = useState(false);
 
@@ -458,7 +287,7 @@ export default function App() {
     if (localProducts) {
       setProducts(JSON.parse(localProducts));
     } else {
-      const initial = currentShopId === 'shop-mauli' ? INITIAL_PRODUCTS : [];
+      const initial: Product[] = [];
       setProducts(initial);
       localStorage.setItem('t_products_' + currentShopId, JSON.stringify(initial));
     }
@@ -468,7 +297,7 @@ export default function App() {
     if (localCustomers) {
       setCustomers(JSON.parse(localCustomers));
     } else {
-      const initial = currentShopId === 'shop-mauli' ? INITIAL_CUSTOMERS : [];
+      const initial: Customer[] = [];
       setCustomers(initial);
       localStorage.setItem('t_customers_' + currentShopId, JSON.stringify(initial));
     }
@@ -478,7 +307,7 @@ export default function App() {
     if (localSuppliers) {
       setSuppliers(JSON.parse(localSuppliers));
     } else {
-      const initial = currentShopId === 'shop-mauli' ? INITIAL_SUPPLIERS : [];
+      const initial: Supplier[] = [];
       setSuppliers(initial);
       localStorage.setItem('t_suppliers_' + currentShopId, JSON.stringify(initial));
     }
@@ -488,7 +317,7 @@ export default function App() {
     if (localSales) {
       setSales(JSON.parse(localSales));
     } else {
-      const initial = currentShopId === 'shop-mauli' ? INITIAL_SALES : [];
+      const initial: Sale[] = [];
       setSales(initial);
       localStorage.setItem('t_sales_' + currentShopId, JSON.stringify(initial));
     }
@@ -565,7 +394,7 @@ export default function App() {
 
   // Auto-pull from Master on fresh device
   useEffect(() => {
-    if (masterSupabaseClient && shops.length === 1 && shops[0].id === 'shop-mauli') {
+    if (masterSupabaseClient && shops.length === 0) {
       const autoPull = async () => {
         try {
           console.log("Fresh device detected. Auto-pulling master data...");
@@ -1238,7 +1067,7 @@ export default function App() {
         // Local only item
         if (localTime === 0 && cloudItems.length > 0) {
           // Unmodified mock item -> discard unless it's master admin or default shop
-          if (item.id === 'user-master' || item.id === 'shop-mauli' || item.role === 'MASTER_ADMIN') {
+          if (item.id === 'user-master' || item.role === 'MASTER_ADMIN') {
              mergedMap.set(item.id, item);
              localUpdatedCount++;
              return;
@@ -1964,7 +1793,7 @@ export default function App() {
                       <input 
                         type="text" 
                         name="otp_username" 
-                        placeholder="उदा. mauli_admin" 
+                        placeholder="उदा. admin" 
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800 bg-white"
                         required 
                       />
@@ -1974,7 +1803,7 @@ export default function App() {
                       <input 
                         type="email" 
                         name="otp_email" 
-                        placeholder="उदा. admin@mauli.com" 
+                        placeholder="उदा. admin@shop.com" 
                         className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800 bg-white"
                         required 
                       />
@@ -2087,7 +1916,7 @@ export default function App() {
                   <input 
                     type="text" 
                     name="username" 
-                    placeholder="उदा. master / mauli_admin" 
+                    placeholder="उदा. master / admin" 
                     className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800" 
                     required 
                   />
@@ -2149,33 +1978,7 @@ export default function App() {
                   <span className="text-[10px] bg-purple-200 text-purple-850 font-extrabold px-2 py-0.5 rounded">master</span>
                 </button>
 
-                <button
-                  onClick={() => loginWithCredentials('mauli_admin', 'admin123')}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-100 transition-all text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🏬</span>
-                    <div>
-                      <h4 className="font-bold text-xs text-emerald-950">दुकान चालक (Mauli Shop Admin)</h4>
-                      <p className="text-[9px] text-emerald-600">माऊली गारमेंट्सचे मालक (Config & Billing)</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-emerald-200 text-emerald-850 font-extrabold px-2 py-0.5 rounded">mauli_admin</span>
-                </button>
-
-                <button
-                  onClick={() => loginWithCredentials('mauli_emp', 'emp123')}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-100 transition-all text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">🧑‍💼</span>
-                    <div>
-                      <h4 className="font-bold text-xs text-amber-950">कर्मचारी (Shop Employee)</h4>
-                      <p className="text-[9px] text-amber-600">मर्यादित प्रवेश (Billing & Stock only)</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-amber-200 text-amber-850 font-extrabold px-2 py-0.5 rounded">mauli_emp</span>
-                </button>
+                
               </div>
             </div>
 
@@ -4312,7 +4115,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                       }} className="space-y-3 text-xs">
                         <div className="space-y-1">
                           <label className="font-bold text-gray-600 block">वापरकर्तानाव (Username)</label>
-                          <input type="text" name="staff_username" placeholder="उदा. mauli_emp" className="w-full border p-2 rounded-lg font-bold text-gray-800" required />
+                          <input type="text" name="staff_username" placeholder="उदा. employee" className="w-full border p-2 rounded-lg font-bold text-gray-800" required />
                         </div>
                         <div className="space-y-1">
                           <label className="font-bold text-gray-600 block">पासवर्ड (Password)</label>
@@ -6096,7 +5899,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
             <div className="text-center pt-4 border-t border-dashed border-black mt-4 space-y-1">
               <p className="text-xs font-bold uppercase tracking-widest">!!! धन्यवाद !!!</p>
               <p className="text-[10px]">भेट दिल्याबद्दल धन्यवाद! पुन्हा अवश्य यावे.</p>
-              <p className="text-[8px] text-gray-400 pt-2 border-t border-dotted border-gray-300">Powered by Mauli Garments billing</p>
+              <p className="text-[8px] text-gray-400 pt-2 border-t border-dotted border-gray-300">Powered by Textile Shop Manager Pro</p>
             </div>
           </div>
         </div>
