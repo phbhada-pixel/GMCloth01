@@ -190,6 +190,7 @@ export default function App() {
 
   // Supabase Integration Setup
   const appStateRef = useRef<any>({});
+  const syncTimeoutRef = useRef<any>(null);
   const [sbUrl, setSbUrl] = useState(() => localStorage.getItem('sb_url') || '');
   const [sbKey, setSbKey] = useState(() => localStorage.getItem('sb_key') || '');
   const [supabaseClient, setSupabaseClient] = useState<SupabaseClient | null>(null);
@@ -486,41 +487,31 @@ export default function App() {
   const updateLocalProducts = (updated: Product[]) => {
     setProducts(updated);
     localStorage.setItem('t_products_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_products', updated);
-    }
+    if (autoSync) { uploadTableToSupabase('t_products', updated); triggerRealtimeSync(); }
   };
 
   const updateLocalCustomers = (updated: Customer[]) => {
     setCustomers(updated);
     localStorage.setItem('t_customers_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_customers', updated);
-    }
+    if (autoSync) { uploadTableToSupabase('t_customers', updated); triggerRealtimeSync(); }
   };
 
   const updateLocalSuppliers = (updated: Supplier[]) => {
     setSuppliers(updated);
     localStorage.setItem('t_suppliers_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_suppliers', updated);
-    }
+    if (autoSync) { uploadTableToSupabase('t_suppliers', updated); triggerRealtimeSync(); }
   };
 
   const updateLocalSales = (updated: Sale[]) => {
     setSales(updated);
     localStorage.setItem('t_sales_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_sales', updated);
-    }
+    if (autoSync) { uploadTableToSupabase('t_sales', updated); triggerRealtimeSync(); }
   };
 
   const updateLocalPurchases = (updated: Purchase[]) => {
     setPurchases(updated);
     localStorage.setItem('t_purchases_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_purchases', updated);
-    }
+    if (autoSync) { uploadTableToSupabase('t_purchases', updated); triggerRealtimeSync(); }
   };
 
   const addAuditLog = (action: string) => {
@@ -533,9 +524,7 @@ export default function App() {
     const updated = [newLog, ...auditLogs];
     setAuditLogs(updated);
     localStorage.setItem('t_audit_logs_' + currentShopId, JSON.stringify(updated));
-    if (autoSync) {
-      uploadTableToSupabase('t_audit_logs', [newLog]);
-    }
+    if (autoSync) { uploadTableToSupabase('t_audit_logs', [newLog]); triggerRealtimeSync(); }
   };
 
   // State for forms/dialogs
@@ -1264,6 +1253,16 @@ export default function App() {
   };
 
   // Silent auto-sync for background synchronization
+  
+  const triggerRealtimeSync = () => {
+    if (syncTimeoutRef.current) clearTimeout(syncTimeoutRef.current);
+    syncTimeoutRef.current = setTimeout(() => {
+      if (navigator.onLine && ((sbUrl && sbKey) || (masterSbUrl && masterSbKey))) {
+        silentSmartSync();
+      }
+    }, 2000); // 2 second debounce
+  };
+
   const silentSmartSync = async () => {
     if (isSyncing || !navigator.onLine) return;
     setIsSyncing(true);
@@ -1425,14 +1424,22 @@ export default function App() {
     setIsSyncing(true);
     setSyncLogs(["📤 क्लाउडवर सर्व स्थानिक डेटा अपलोड करत आहे..."]);
     try {
-      await uploadTableToSupabase('t_shops', shops);
-      await uploadTableToSupabase('t_user_accounts', users);
-      await uploadTableToSupabase('t_products', products);
-      await uploadTableToSupabase('t_customers', customers);
-      await uploadTableToSupabase('t_suppliers', suppliers);
-      await uploadTableToSupabase('t_sales', sales);
-      await uploadTableToSupabase('t_purchases', purchases);
-      await uploadTableToSupabase('t_audit_logs', auditLogs);
+      const r1 = await uploadTableToSupabase('t_shops', shops);
+      if (!r1?.success && r1?.error) throw new Error(r1.error);
+      const r2 = await uploadTableToSupabase('t_user_accounts', users);
+      if (!r2?.success && r2?.error) throw new Error(r2.error);
+      const r3 = await uploadTableToSupabase('t_products', products);
+      if (!r3?.success && r3?.error) throw new Error(r3.error);
+      const r4 = await uploadTableToSupabase('t_customers', customers);
+      if (!r4?.success && r4?.error) throw new Error(r4.error);
+      const r5 = await uploadTableToSupabase('t_suppliers', suppliers);
+      if (!r5?.success && r5?.error) throw new Error(r5.error);
+      const r6 = await uploadTableToSupabase('t_sales', sales);
+      if (!r6?.success && r6?.error) throw new Error(r6.error);
+      const r7 = await uploadTableToSupabase('t_purchases', purchases);
+      if (!r7?.success && r7?.error) throw new Error(r7.error);
+      const r8 = await uploadTableToSupabase('t_audit_logs', auditLogs);
+      if (!r8?.success && r8?.error) throw new Error(r8.error);
       
       setSyncLogs(prev => [...prev, "✅ सर्व स्थानिक डेटा यशस्वीरित्या क्लाउडवर अपलोड झाला आहे!"]);
       addAuditLog("स्थानिक डेटा मॅन्युअली क्लाउडवर पुश केला");
@@ -4109,9 +4116,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                         e.currentTarget.reset();
                         
                         // Sync with Supabase if online/autoSync is enabled
-                        if (autoSync && sbUrl && sbKey) {
-                          uploadTableToSupabase('t_user_accounts', nextUsers);
-                        }
+                        if (autoSync && sbUrl && sbKey) { uploadTableToSupabase('t_user_accounts', nextUsers); triggerRealtimeSync(); }
                       }} className="space-y-3 text-xs">
                         <div className="space-y-1">
                           <label className="font-bold text-gray-600 block">वापरकर्तानाव (Username)</label>
@@ -4163,9 +4168,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                                       addAuditLog(`दुकान मालकाने कर्मचारी ${acc.username} चा पासवर्ड रिसेट केला`);
                                       alert(`👤 '${acc.username}' चा पासवर्ड यशस्वीरित्या बदलून '${trimmed}' करण्यात आला आहे!`);
 
-                                      if (autoSync && sbUrl && sbKey) {
-                                        uploadTableToSupabase('t_user_accounts', nextUsers);
-                                      }
+                                      if (autoSync && sbUrl && sbKey) { uploadTableToSupabase('t_user_accounts', nextUsers); triggerRealtimeSync(); }
                                     }
                                   }}
                                   className="text-indigo-600 hover:text-indigo-800 text-[10px] font-black hover:bg-indigo-50 px-2 py-1 rounded"
@@ -4180,9 +4183,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                                       localStorage.setItem('t_users', JSON.stringify(nextUsers));
                                       addAuditLog(`कर्मचारी खाते डिलीट केले: ${acc.username}`);
                                       
-                                      if (autoSync && sbUrl && sbKey) {
-                                        uploadTableToSupabase('t_user_accounts', nextUsers);
-                                      }
+                                      if (autoSync && sbUrl && sbKey) { uploadTableToSupabase('t_user_accounts', nextUsers); triggerRealtimeSync(); }
                                     }
                                   }}
                                   className="text-red-500 hover:text-red-700 text-[10px] font-bold px-2 py-1 hover:bg-red-50 rounded"
@@ -4439,7 +4440,9 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                               setIsSyncing(true);
                               try {
                                 const res1 = await uploadTableToSupabase('t_shops', shops);
+                                if (!res1?.success) throw new Error(res1?.error || "Unknown Error");
                                 const res2 = await uploadTableToSupabase('t_user_accounts', users);
+                                if (!res2?.success) throw new Error(res2?.error || "Unknown Error");
                                 if (res1.success && res2.success) {
                                   alert("🎉 मास्टर डेटा यशस्वीरित्या स्वतंत्र मास्टर क्लाउडवर सुरक्षितपणे अपलोड करण्यात आला आहे!");
                                 } else {
@@ -4976,9 +4979,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                       alert(`'${sName}' दुकान यशस्वीरित्या जोडले गेले!`);
                       e.currentTarget.reset();
 
-                      if (autoSync && masterSbUrl && masterSbKey) {
-                        uploadTableToSupabase('t_shops', nextShops);
-                      }
+                      if (autoSync && masterSbUrl && masterSbKey) { uploadTableToSupabase('t_shops', nextShops); triggerRealtimeSync(); }
                     }} className="space-y-3 text-xs">
                       <div className="space-y-1">
                         <label className="font-bold text-gray-600 block">दुकान नाव (Shop Name)</label>
@@ -5051,9 +5052,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                       alert(`वापरकर्ता '${uName}' यशस्वीरित्या जोडला गेला!`);
                       e.currentTarget.reset();
 
-                      if (autoSync && masterSbUrl && masterSbKey) {
-                        uploadTableToSupabase('t_user_accounts', nextUsers);
-                      }
+                      if (autoSync && masterSbUrl && masterSbKey) { uploadTableToSupabase('t_user_accounts', nextUsers); triggerRealtimeSync(); }
                     }} className="space-y-3 text-xs">
                       <div className="space-y-1">
                         <label className="font-bold text-gray-600 block">दुकान निवडा (Select Shop)</label>
@@ -5204,9 +5203,7 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;`;
                                       addAuditLog(`मास्टर अॅडमीनने ${adminUser.username} चा पासवर्ड रिसेट केला`);
                                       alert(`👤 '${adminUser.username}' चा पासवर्ड यशस्वीरित्या बदलून '${trimmed}' करण्यात आला आहे!`);
 
-                                      if (autoSync && masterSbUrl && masterSbKey) {
-                                        uploadTableToSupabase('t_user_accounts', nextUsers);
-                                      }
+                                      if (autoSync && masterSbUrl && masterSbKey) { uploadTableToSupabase('t_user_accounts', nextUsers); triggerRealtimeSync(); }
                                     }
                                   }}
                                   className="w-full bg-purple-600 hover:bg-purple-700 text-white font-extrabold text-[10px] py-1.5 rounded-lg transition-colors shadow-sm flex items-center justify-center gap-1"
