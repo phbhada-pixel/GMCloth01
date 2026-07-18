@@ -1832,6 +1832,52 @@ export default function App() {
   // Dashboard calculations
   const lowStockCount = products.filter(p => p.stock_quantity <= p.min_stock).length;
   const totalSalesVal = sales.reduce((sum, item) => sum + item.grand_total, 0);
+
+  const [revenueMetrics, setRevenueMetrics] = useState({ daily: 0, weekly: 0, monthly: 0, yearly: 0 });
+
+  useEffect(() => {
+    if (activeTab === 'home' && role !== 'MASTER_ADMIN' && currentShopId) {
+      const fetchMetrics = async () => {
+        try {
+          if (supabaseClient) {
+            const { data, error } = await supabaseClient.rpc('get_revenue_metrics', { p_shop_id: currentShopId });
+            if (!error && data && data.length > 0) {
+              setRevenueMetrics({
+                daily: data[0].daily_revenue || 0,
+                weekly: data[0].weekly_revenue || 0,
+                monthly: data[0].monthly_revenue || 0,
+                yearly: data[0].yearly_revenue || 0
+              });
+              return;
+            }
+          }
+        } catch (e) {
+          console.error("RPC failed, falling back to local calculation");
+        }
+        
+        // Fallback to local calculation
+        const now = new Date();
+        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        
+        // start of week (Sunday)
+        const dayOfWeek = now.getDay();
+        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek).getTime();
+        
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+        const startOfYear = new Date(now.getFullYear(), 0, 1).getTime();
+        
+        let d = 0, w = 0, m = 0, y = 0;
+        sales.forEach(sale => {
+          if (sale.date >= startOfDay) d += sale.grand_total;
+          if (sale.date >= startOfWeek) w += sale.grand_total;
+          if (sale.date >= startOfMonth) m += sale.grand_total;
+          if (sale.date >= startOfYear) y += sale.grand_total;
+        });
+        setRevenueMetrics({ daily: d, weekly: w, monthly: m, yearly: y });
+      };
+      fetchMetrics();
+    }
+  }, [activeTab, sales, currentShopId, role, supabaseClient]);
   const estimatedProfit = totalSalesVal * 0.35; // 35% standard clothing margin
   const totalOutstanding = customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0);
   
@@ -3732,6 +3778,34 @@ ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 
+
+-- ९. ॲनालिटिक्स (Analytics RPC)
+CREATE OR REPLACE FUNCTION get_revenue_metrics(p_shop_id text)
+RETURNS TABLE (
+  daily_revenue numeric,
+  weekly_revenue numeric,
+  monthly_revenue numeric,
+  yearly_revenue numeric
+)
+LANGUAGE plpgsql
+AS $
+DECLARE
+  today_start bigint := (extract(epoch from date_trunc('day', now())) * 1000)::bigint;
+  week_start bigint := (extract(epoch from date_trunc('week', now())) * 1000)::bigint;
+  month_start bigint := (extract(epoch from date_trunc('month', now())) * 1000)::bigint;
+  year_start bigint := (extract(epoch from date_trunc('year', now())) * 1000)::bigint;
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN date >= today_start THEN grand_total ELSE 0 END), 0) AS daily_revenue,
+    COALESCE(SUM(CASE WHEN date >= week_start THEN grand_total ELSE 0 END), 0) AS weekly_revenue,
+    COALESCE(SUM(CASE WHEN date >= month_start THEN grand_total ELSE 0 END), 0) AS monthly_revenue,
+    COALESCE(SUM(CASE WHEN date >= year_start THEN grand_total ELSE 0 END), 0) AS yearly_revenue
+  FROM t_sales
+  WHERE shop_id = p_shop_id;
+END;
+$;
+
 -- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
@@ -3866,6 +3940,34 @@ ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+
+-- ९. ॲनालिटिक्स (Analytics RPC)
+CREATE OR REPLACE FUNCTION get_revenue_metrics(p_shop_id text)
+RETURNS TABLE (
+  daily_revenue numeric,
+  weekly_revenue numeric,
+  monthly_revenue numeric,
+  yearly_revenue numeric
+)
+LANGUAGE plpgsql
+AS $
+DECLARE
+  today_start bigint := (extract(epoch from date_trunc('day', now())) * 1000)::bigint;
+  week_start bigint := (extract(epoch from date_trunc('week', now())) * 1000)::bigint;
+  month_start bigint := (extract(epoch from date_trunc('month', now())) * 1000)::bigint;
+  year_start bigint := (extract(epoch from date_trunc('year', now())) * 1000)::bigint;
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN date >= today_start THEN grand_total ELSE 0 END), 0) AS daily_revenue,
+    COALESCE(SUM(CASE WHEN date >= week_start THEN grand_total ELSE 0 END), 0) AS weekly_revenue,
+    COALESCE(SUM(CASE WHEN date >= month_start THEN grand_total ELSE 0 END), 0) AS monthly_revenue,
+    COALESCE(SUM(CASE WHEN date >= year_start THEN grand_total ELSE 0 END), 0) AS yearly_revenue
+  FROM t_sales
+  WHERE shop_id = p_shop_id;
+END;
+$;
 
 -- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
@@ -4642,6 +4744,34 @@ ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 
+
+-- ९. ॲनालिटिक्स (Analytics RPC)
+CREATE OR REPLACE FUNCTION get_revenue_metrics(p_shop_id text)
+RETURNS TABLE (
+  daily_revenue numeric,
+  weekly_revenue numeric,
+  monthly_revenue numeric,
+  yearly_revenue numeric
+)
+LANGUAGE plpgsql
+AS $
+DECLARE
+  today_start bigint := (extract(epoch from date_trunc('day', now())) * 1000)::bigint;
+  week_start bigint := (extract(epoch from date_trunc('week', now())) * 1000)::bigint;
+  month_start bigint := (extract(epoch from date_trunc('month', now())) * 1000)::bigint;
+  year_start bigint := (extract(epoch from date_trunc('year', now())) * 1000)::bigint;
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN date >= today_start THEN grand_total ELSE 0 END), 0) AS daily_revenue,
+    COALESCE(SUM(CASE WHEN date >= week_start THEN grand_total ELSE 0 END), 0) AS weekly_revenue,
+    COALESCE(SUM(CASE WHEN date >= month_start THEN grand_total ELSE 0 END), 0) AS monthly_revenue,
+    COALESCE(SUM(CASE WHEN date >= year_start THEN grand_total ELSE 0 END), 0) AS yearly_revenue
+  FROM t_sales
+  WHERE shop_id = p_shop_id;
+END;
+$;
+
 -- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
@@ -4776,6 +4906,34 @@ ALTER TABLE t_suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_sales DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_purchases DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
+
+
+-- ९. ॲनालिटिक्स (Analytics RPC)
+CREATE OR REPLACE FUNCTION get_revenue_metrics(p_shop_id text)
+RETURNS TABLE (
+  daily_revenue numeric,
+  weekly_revenue numeric,
+  monthly_revenue numeric,
+  yearly_revenue numeric
+)
+LANGUAGE plpgsql
+AS $
+DECLARE
+  today_start bigint := (extract(epoch from date_trunc('day', now())) * 1000)::bigint;
+  week_start bigint := (extract(epoch from date_trunc('week', now())) * 1000)::bigint;
+  month_start bigint := (extract(epoch from date_trunc('month', now())) * 1000)::bigint;
+  year_start bigint := (extract(epoch from date_trunc('year', now())) * 1000)::bigint;
+BEGIN
+  RETURN QUERY
+  SELECT
+    COALESCE(SUM(CASE WHEN date >= today_start THEN grand_total ELSE 0 END), 0) AS daily_revenue,
+    COALESCE(SUM(CASE WHEN date >= week_start THEN grand_total ELSE 0 END), 0) AS weekly_revenue,
+    COALESCE(SUM(CASE WHEN date >= month_start THEN grand_total ELSE 0 END), 0) AS monthly_revenue,
+    COALESCE(SUM(CASE WHEN date >= year_start THEN grand_total ELSE 0 END), 0) AS yearly_revenue
+  FROM t_sales
+  WHERE shop_id = p_shop_id;
+END;
+$;
 
 -- जर तुम्ही आधीच टेबल तयार केले असेल आणि नवीन कॉलम जोडायचे असतील (For Existing Databases):
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
