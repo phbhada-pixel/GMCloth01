@@ -590,12 +590,14 @@ export default function App() {
   const [billingSearch, setBillingSearch] = useState('');
   const [billPaymentMode, setBillPaymentMode] = useState<'CASH' | 'UPI' | 'CARD' | 'CREDIT'>('CASH');
   const [cartDiscount, setCartDiscount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState<any | null>(null);
+  const [couponCodeInput, setCouponCodeInput] = useState('');
   const [completedInvoice, setCompletedInvoice] = useState<Sale | null>(null);
   const [whatsappPhone, setWhatsappPhone] = useState('');
 
   // WhatsApp Customer Invoice Generator
-  const getWhatsAppCustomerUrl = () => {
-    if (!completedInvoice) return '#';
+  const getWhatsAppCustomerText = () => {
+    if (!completedInvoice) return '';
     
     const itemsText = cartItems.map((item) => {
       const unitPrice = item.product.selling_price - item.discount;
@@ -629,11 +631,32 @@ export default function App() {
       `------------------------------------------\n` +
       `🌸 *आपली सेवा हीच आमची ओळख! पुन्हा अवश्य यावे.*`;
 
-    const encodedMessage = encodeURIComponent(messageText);
-    const cleanPhone = whatsappPhone.replace(/[^0-9]/g, '');
-    const finalPhone = cleanPhone.length === 10 ? `91${cleanPhone}` : cleanPhone;
-    
-    return `https://wa.me/${finalPhone}?text=${encodedMessage}`;
+    return messageText;
+  };
+
+  const sendWhatsAppBillApi = async () => {
+    if (!completedInvoice || !whatsappPhone) {
+        alert('कृपया ग्राहकाचा मोबाईल नंबर प्रविष्ट करा');
+        return;
+    }
+    try {
+        const payload = getWhatsAppCustomerText();
+        const response = await fetch('/api/send-whatsapp-bill', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: whatsappPhone, payload: payload, invoice: completedInvoice })
+        });
+        const result = await response.json();
+        if (result.success) {
+            alert('WhatsApp API Message Sent Successfully!');
+            addAuditLog(`व्हाट्सॲपवर पावती पाठवली (API): ${completedInvoice.customer_name} (${whatsappPhone})`);
+        } else {
+            alert('Failed to send WhatsApp message.');
+        }
+    } catch (e) {
+        alert('Error sending WhatsApp message.');
+        console.error(e);
+    }
   };
 
   // Change language helper
@@ -805,11 +828,17 @@ export default function App() {
       gstSum += (sub * (item.product.gst_percent / 100));
     });
 
-    const netTotal = rawTotal - cartDiscount;
+    let couponDiscountAmount = 0;
+    if (appliedCoupon) {
+      couponDiscountAmount = (rawTotal * appliedCoupon.discount_percentage) / 100;
+    }
+
+    const netTotal = rawTotal - cartDiscount - couponDiscountAmount;
     return {
       subTotal: rawTotal,
+      couponDiscountAmount,
       gstAmount: gstSum,
-      grandTotal: netTotal + gstSum
+      grandTotal: Math.max(0, netTotal + gstSum)
     };
   };
 
@@ -2632,17 +2661,12 @@ export default function App() {
                           className="w-full text-xs border border-emerald-200 rounded-xl pl-11 pr-3 py-2 bg-white font-bold text-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                         />
                       </div>
-                      <a 
-                        href={getWhatsAppCustomerUrl()}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => {
-                          addAuditLog(`व्हाट्सॲपवर पावती पाठवली: ${completedInvoice.customer_name} (${whatsappPhone})`);
-                        }}
+                      <button 
+                        onClick={sendWhatsAppBillApi}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-sm"
                       >
-                        <Send className="w-4 h-4" /> पाठवा (Send)
-                      </a>
+                        <Send className="w-4 h-4" /> पाठवा (API)
+                      </button>
                     </div>
                   </div>
 
@@ -2665,9 +2689,58 @@ export default function App() {
                 </div>
               ) : (
                 /* Main Billing Interface */
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Left panel: Cart & Checkout (Lg: 5cols) */}
-                  <div className="lg:col-span-5 space-y-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-col-reverse lg:flex-row">
+                  {/* Left panel: Product catalog list */}
+                  <div className="lg:col-span-8 space-y-4">
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                        <input 
+                          type="text"
+                          placeholder={Loc.t("search_product", lang)}
+                          value={billingSearch}
+                          onChange={(e) => setBillingSearch(e.target.value)}
+                          className="w-full pl-9 pr-4 py-1.5 border border-forest-100 rounded-xl text-xs bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto">
+                      {products
+                        .filter(p => p.name.toLowerCase().includes(billingSearch.toLowerCase()) || (p.category && p.category.toLowerCase().includes(billingSearch.toLowerCase())))
+                        .map(p => (
+                          <div 
+                            key={p.id}
+                            onClick={() => addToCart(p)}
+                            className="bg-white p-3 rounded-2xl border border-forest-100 hover:border-forest-400 cursor-pointer transition-all flex flex-col justify-between text-left group hover:shadow-sm"
+                          >
+                            <div>
+                              <div className="flex justify-between items-start gap-1">
+                                <p className="font-bold text-xs text-gray-800 group-hover:text-forest-500 transition-colors line-clamp-2">{p.name}</p>
+                                <span className="bg-forest-50 text-forest-700 px-1.5 py-0.5 rounded text-[8px] font-bold shrink-0">{p.category}</span>
+                              </div>
+                              <p className="text-[10px] text-gray-500 mt-1">कापड: {p.fabric || '-'} | रॅक: {p.rack_number || '-'}</p>
+                            </div>
+
+                            <div className="flex justify-between items-center mt-3 border-t pt-2">
+                              <div>
+                                <span className="text-xs font-black text-forest-500">₹{p.selling_price}</span>
+                                {p.mrp > p.selling_price && (
+                                  <span className="text-[9px] text-gray-400 line-through ml-1">₹{p.mrp}</span>
+                                )}
+                              </div>
+                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                                p.stock_quantity <= 0 ? 'bg-red-50 text-red-600' : p.stock_quantity <= p.min_stock ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-600'
+                              }`}>
+                                {p.stock_quantity <= 0 ? 'स्टॉक संपला' : `${p.stock_quantity} शिल्लक`}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                  {/* Right panel: Cart & Checkout */}
+                  <div className="lg:col-span-4 space-y-4">
                     <div className="border border-forest-100 rounded-2xl p-4 bg-gray-50/50 space-y-4">
                       <h3 className="font-bold text-sm text-gray-800 flex items-center gap-1.5 border-b pb-2">
                         🛒 खरेदी कार्ट (Cart)
@@ -2749,7 +2822,42 @@ export default function App() {
                         )}
                       </div>
 
-                      {/* Summary calculations */}
+                      
+                      {/* Applied Coupon & System Coupons */}
+                      <div className="border border-indigo-100 rounded-xl p-3 bg-indigo-50/30">
+                        <h4 className="text-[10px] font-bold text-indigo-800 mb-2 uppercase">🎁 Apply Coupon</h4>
+                        <div className="flex gap-2">
+                           <input 
+                             type="text" 
+                             placeholder="Enter Coupon Code" 
+                             value={couponCodeInput}
+                             onChange={e => setCouponCodeInput(e.target.value.toUpperCase())}
+                             className="flex-1 text-xs border border-indigo-200 rounded-lg px-2 py-1.5 uppercase font-bold"
+                           />
+                           <button 
+                             onClick={() => {
+                               const found = coupons.find(c => c.code === couponCodeInput);
+                               if (found) {
+                                  setAppliedCoupon(found);
+                                  alert('Coupon Applied: ' + found.discount_percentage + '% OFF');
+                               } else {
+                                  alert('Invalid or expired coupon code!');
+                               }
+                             }}
+                             className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700"
+                           >
+                             Apply
+                           </button>
+                        </div>
+                        {appliedCoupon && (
+                           <div className="mt-2 flex justify-between items-center bg-indigo-100 p-2 rounded-lg text-xs font-bold text-indigo-900">
+                              <span>Applied: {appliedCoupon.code} ({appliedCoupon.discount_percentage}% OFF)</span>
+                              <button onClick={() => setAppliedCoupon(null)} className="text-rose-600 hover:text-rose-800 text-[10px] bg-rose-100 px-2 py-0.5 rounded">Remove</button>
+                           </div>
+                        )}
+                      </div>
+
+{/* Summary calculations */}
                       {cartItems.length > 0 && (
                         <div className="border-t pt-3 space-y-1.5 text-xs text-gray-600">
                           <div className="flex justify-between">
@@ -2758,7 +2866,7 @@ export default function App() {
                           </div>
 
                           <div className="flex items-center justify-between">
-                            <span>अतिरिक्त सवलत (Discount)</span>
+                            <span>मॅन्युअल सवलत (Manual Discount)</span>
                             <div className="flex items-center gap-1">
                               <span className="text-[10px]">₹</span>
                               <input 
@@ -2769,6 +2877,12 @@ export default function App() {
                               />
                             </div>
                           </div>
+                          {appliedCoupon && (
+                            <div className="flex justify-between text-indigo-600 font-bold">
+                              <span>कूपन सवलत ({appliedCoupon.code})</span>
+                              <span>-₹{cartTotals().couponDiscountAmount.toFixed(2)}</span>
+                            </div>
+                          )}
 
                           <div className="flex justify-between">
                             <span>जीएसटी (GST)</span>
@@ -2811,55 +2925,7 @@ export default function App() {
                     </div>
                   </div>
 
-                  {/* Right panel: Product catalog list (Lg: 7cols) */}
-                  <div className="lg:col-span-7 space-y-4">
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
-                        <input 
-                          type="text"
-                          placeholder={Loc.t("search_product", lang)}
-                          value={billingSearch}
-                          onChange={(e) => setBillingSearch(e.target.value)}
-                          className="w-full pl-9 pr-4 py-1.5 border border-forest-100 rounded-xl text-xs bg-white"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[500px] overflow-y-auto">
-                      {products
-                        .filter(p => p.name.toLowerCase().includes(billingSearch.toLowerCase()) || (p.category && p.category.toLowerCase().includes(billingSearch.toLowerCase())))
-                        .map(p => (
-                          <div 
-                            key={p.id}
-                            onClick={() => addToCart(p)}
-                            className="bg-white p-3 rounded-2xl border border-forest-100 hover:border-forest-400 cursor-pointer transition-all flex flex-col justify-between text-left group hover:shadow-sm"
-                          >
-                            <div>
-                              <div className="flex justify-between items-start gap-1">
-                                <p className="font-bold text-xs text-gray-800 group-hover:text-forest-500 transition-colors line-clamp-2">{p.name}</p>
-                                <span className="bg-forest-50 text-forest-700 px-1.5 py-0.5 rounded text-[8px] font-bold shrink-0">{p.category}</span>
-                              </div>
-                              <p className="text-[10px] text-gray-500 mt-1">कापड: {p.fabric || '-'} | रॅक: {p.rack_number || '-'}</p>
-                            </div>
-
-                            <div className="flex justify-between items-center mt-3 border-t pt-2">
-                              <div>
-                                <span className="text-xs font-black text-forest-500">₹{p.selling_price}</span>
-                                {p.mrp > p.selling_price && (
-                                  <span className="text-[9px] text-gray-400 line-through ml-1">₹{p.mrp}</span>
-                                )}
-                              </div>
-                              <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded ${
-                                p.stock_quantity <= 0 ? 'bg-red-50 text-red-600' : p.stock_quantity <= p.min_stock ? 'bg-amber-50 text-amber-600' : 'bg-gray-100 text-gray-600'
-                              }`}>
-                                {p.stock_quantity <= 0 ? 'स्टॉक संपला' : `${p.stock_quantity} शिल्लक`}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  </div>
+                  
                 </div>
               )}
             </div>
