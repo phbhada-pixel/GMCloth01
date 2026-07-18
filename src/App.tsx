@@ -492,6 +492,8 @@ export default function App() {
           copy.sb_key = copy.sbKey || null;
           delete copy.sbUrl;
           delete copy.sbKey;
+          delete copy.license_status;
+          delete copy.license_expiry_date;
         }
         return copy;
       });
