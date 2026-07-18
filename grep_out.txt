@@ -1,0 +1,38 @@
+149:     return savedRole === 'MASTER_ADMIN' ? 'shops' : 'home';
+153:     if (role === 'MASTER_ADMIN' && activeTab !== 'shops') {
+175:         role: "MASTER_ADMIN",
+434:     const useMaster = forceUseMaster || (isMasterTable && role === 'MASTER_ADMIN');
+452:        const masterAccounts = dataArray.filter(u => u.role === 'MASTER_ADMIN' || u.role === 'SHOP_ADMIN');
+466:        if (shopAccounts.length > 0 && sbUrl && sbKey && role !== 'MASTER_ADMIN') {
+553:       user: role === 'MASTER_ADMIN' ? 'मास्टर अॅडमीन' : role === 'SHOP_ADMIN' ? 'दुकान मालक' : role === 'EMPLOYEE' ? 'कर्मचारी' : 'अतिथी',
+641:     if (selectedRole === 'MASTER_ADMIN') {
+667:       if (matched.role === 'MASTER_ADMIN') {
+698:         action: `${matched.role === 'MASTER_ADMIN' ? 'मास्टर' : 'दुकान'} लॉगिन यशस्वी: ${matched.username} (नवीन सत्र सुरू झाले)`,
+699:         user: matched.role === 'MASTER_ADMIN' ? 'मास्टर अॅडमीन' : matched.role === 'SHOP_ADMIN' ? 'दुकान मालक' : 'कर्मचारी',
+1016:     const useMaster = forceUseMaster || (isMasterTable && role === 'MASTER_ADMIN');
+1034:        // Fetch MASTER_ADMIN and SHOP_ADMIN from Master DB
+1038:           if (role !== 'MASTER_ADMIN' && currentShopId) {
+1039:               query = query.or(`shopId.eq.${currentShopId},role.eq.MASTER_ADMIN`);
+1043:              const masters = data.filter(u => u.role === 'MASTER_ADMIN' || u.role === 'SHOP_ADMIN');
+1048:        if (sbUrl && sbKey && role !== 'MASTER_ADMIN') {
+1115:           if (item.id === 'user-master' || item.role === 'MASTER_ADMIN') {
+1160:     if (role === 'MASTER_ADMIN') {
+1230:       if (role === 'MASTER_ADMIN') {
+1256:       a.download = `backup_${role === 'MASTER_ADMIN' ? 'master' : currentShopId}_${new Date().toISOString().slice(0,10)}.json`;
+1340:       const isMaster = role === 'MASTER_ADMIN';
+1427:       const isMaster = currentUser.role === 'MASTER_ADMIN';
+1718:     if (isLocked && role !== 'MASTER_ADMIN') {
+1866:   const isLicenseExpired = currentShopData && (currentShopData.license_status === 'EXPIRED' || currentShopData.license_status === 'SUSPENDED') && role !== 'MASTER_ADMIN';
+1925:               {role === 'MASTER_ADMIN' ? (
+2013:             {/* Active Shop selection hidden for MASTER_ADMIN for security */}
+2036:               {role === 'MASTER_ADMIN' ? '👑 मास्टर अॅडमीन' : role === 'SHOP_ADMIN' ? '🏬 दुकान मालक' : '🧑‍💼 कर्मचारी'}
+2183:             ...(role === 'MASTER_ADMIN' ? [{ id: 'shops', icon: Settings, label: '🏬 ' + (lang === 'MARATHI' ? 'दुकान व्यवस्थापन' : lang === 'HINDI' ? 'दुकान प्रबंधन' : 'Shop Management') }] : [])
+2185:             if (role === 'MASTER_ADMIN') {
+2218:           {activeTab === 'home' && role !== 'MASTER_ADMIN' && (
+2484:           {activeTab === 'billing' && role !== 'MASTER_ADMIN' && (
+2809:           {activeTab === 'stock' && role !== 'MASTER_ADMIN' && (
+2944:           {activeTab === 'reports' && role !== 'MASTER_ADMIN' && (
+3243:           {activeTab === 'settings' && role !== 'MASTER_ADMIN' && (
+4049:           {activeTab === 'shops' && role === 'MASTER_ADMIN' && (
+5106:           ...(role === 'MASTER_ADMIN' ? [{ id: 'shops', icon: Settings, label: '🏬 ' + (lang === 'ENGLISH' ? 'Shop Management' : 'दुकाने') }] : [{ id: 'settings', icon: Settings, label: '⚙️ ' + Loc.t('settings', lang) }]),
+5108:           if (role === 'MASTER_ADMIN') {

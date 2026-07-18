@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import LandingPage from './LandingPage';
+
 import { 
   ShoppingBag, 
   Boxes, 
@@ -45,7 +47,8 @@ import {
   Language, 
   UserRole,
   Shop,
-  UserAccount
+  UserAccount,
+  Coupon
 } from './types';
 import { Loc } from './localization';
 
@@ -162,6 +165,14 @@ export default function App() {
     return initial;
   });
 
+  const [coupons, setCoupons] = useState<any[]>(() => {
+    const saved = localStorage.getItem('t_coupons');
+    if (saved) return JSON.parse(saved);
+    const initial: any[] = [];
+    localStorage.setItem('t_coupons', JSON.stringify(initial));
+    return initial;
+  });
+
   const [users, setUsers] = useState<UserAccount[]>(() => {
     const saved = localStorage.getItem('t_users');
     if (saved) return JSON.parse(saved);
@@ -204,7 +215,7 @@ export default function App() {
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncLogs, setSyncLogs] = useState<string[]>([]);
   const [sbSubTab, setSbSubTab] = useState<'status' | 'sql' | 'guide'>('status');
-  const [masterSbSubTab, setMasterSbSubTab] = useState<'status' | 'master_sql' | 'shop_sql' | 'guide'>('status');
+  const [masterSbSubTab, setMasterSbSubTab] = useState<'status' | 'master_sql' | 'shop_sql' | 'guide' | 'verification' | 'tenants' | 'coupons'>('verification');
   const [isShopSbUnlocked, setIsShopSbUnlocked] = useState<boolean>(false);
   const [isMasterSbUnlocked, setIsMasterSbUnlocked] = useState<boolean>(false);
 
@@ -1743,309 +1754,78 @@ export default function App() {
   // Login component
   if (!role) {
     return (
-      <div className="min-h-screen bg-[#F4F6F0] flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-xl border border-forest-100 overflow-hidden">
-          {/* Cover & Brand Accent */}
-          <div className="bg-gradient-to-br from-forest-500 via-forest-600 to-forest-700 p-6 text-white text-center relative">
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-zari-300 via-zari-500 to-zari-300"></div>
-            <div className="w-16 h-16 bg-forest-50/20 backdrop-blur-md rounded-2xl mx-auto flex items-center justify-center text-3xl shadow-inner border border-forest-400">
-              👕
-            </div>
-            <h1 className="mt-3 text-xl font-bold tracking-tight">{Loc.t('app_title', lang)}</h1>
-            <p className="text-[10px] text-forest-100 mt-0.5">{Loc.t('tagline', lang)}</p>
-          </div>
-
-          <div className="p-6 space-y-5">
-            {/* Language Selector */}
-            <div className="flex flex-col items-center space-y-1.5">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider flex items-center gap-1">
-                <Globe className="w-3.5 h-3.5 text-forest-500" /> भाषा निवडा / Choose Language
-              </span>
-              <div className="inline-flex rounded-xl bg-forest-50 p-1 border border-forest-100">
-                {(['MARATHI', 'HINDI', 'ENGLISH'] as Language[]).map(l => (
-                  <button
-                    key={l}
-                    onClick={() => changeLanguage(l)}
-                    className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                      lang === l 
-                        ? 'bg-forest-500 text-white shadow-sm' 
-                        : 'text-gray-600 hover:text-forest-600'
-                    }`}
-                  >
-                    {l === 'MARATHI' ? 'मराठी' : l === 'HINDI' ? 'हिंदी' : 'English'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Credential Login Form / OTP Password Change */}
-            {showOtpChange ? (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h3 className="font-extrabold text-xs text-forest-700 flex items-center gap-1.5">
-                    <span>🔑</span> ईमेल OTP द्वारे पासवर्ड बदला
-                  </h3>
-                  <button
-                    onClick={() => {
-                      setShowOtpChange(false);
-                      setOtpStep('INPUT_USER');
-                      setMockEmailAlert(null);
-                    }}
-                    className="text-[10px] text-forest-600 hover:underline font-black bg-forest-50 px-2 py-1 rounded-lg"
-                  >
-                    ← लॉगिनवर जा
-                  </button>
-                </div>
-
-                {mockEmailAlert && (
-                  <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-[10px] font-semibold text-blue-900 font-mono whitespace-pre-wrap leading-relaxed shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 bg-blue-500 text-white text-[8px] font-bold px-1.5 py-0.5 rounded-bl">
-                      EMAIL OUTBOX
-                    </div>
-                    {mockEmailAlert}
-                  </div>
-                )}
-
-                {otpStep === 'INPUT_USER' && (
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    const fd = new FormData(e.currentTarget);
-                    const u = (fd.get('otp_username') as string).trim();
-                    const emailInput = (fd.get('otp_email') as string).trim();
-
-                    if (!u || !emailInput) return;
-
-                    const matched = users.find(user => user.username.toLowerCase() === u.toLowerCase());
-                    if (!matched) {
-                      alert("❌ या नावाचे वापरकर्ता खाते सापडले नाही!");
-                      return;
-                    }
-                    if (matched.role !== 'SHOP_ADMIN') {
-                      alert("❌ ही सुरक्षा सुविधा फक्त 'दुकान चालक' (Shop Admin) लॉगिनसाठी उपलब्ध आहे!");
-                      return;
-                    }
-
-                    // If they have email set, verify it matches
-                    if (matched.email && matched.email.toLowerCase() !== emailInput.toLowerCase()) {
-                      alert(`❌ नोंदणीकृत ईमेल जुळत नाही! (Hint: ${matched.email.replace(/(.).*@/, "$1***@")})`);
-                      return;
-                    }
-
-                    // Generate OTP
-                    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-                    setOtpUser(matched.username);
-                    setOtpEmail(emailInput);
-                    setGeneratedOtp(otpCode);
-
-                    // Update user's email if not already present
-                    if (!matched.email) {
-                      const nextUsers = users.map(user => user.id === matched.id ? { ...user, email: emailInput } : user);
-                      setUsers(nextUsers);
-                      localStorage.setItem('t_users', JSON.stringify(nextUsers));
-                    }
-
-                    // Send Simulated Email
-                    const alertMsg = `To: ${emailInput}\nविषय: पासवर्ड बदला OTP कूट\n\nप्रिय ${matched.username},\nतुमच्या खात्याचा पासवर्ड बदलण्यासाठी OTP कूट खालीलप्रमाणे आहे:\n🔑 OTP Code: ${otpCode}\n(हा कोड टाका)`;
-                    setMockEmailAlert(alertMsg);
-                    setOtpStep('INPUT_OTP');
-                  }} className="space-y-3 text-xs">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 block">वापरकर्तानाव (Username)</label>
-                      <input 
-                        type="text" 
-                        name="otp_username" 
-                        placeholder="उदा. admin" 
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800 bg-white"
-                        required 
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 block">नोंदणीकृत ईमेल (Registered Email)</label>
-                      <input 
-                        type="email" 
-                        name="otp_email" 
-                        placeholder="उदा. admin@shop.com" 
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800 bg-white"
-                        required 
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
-                    >
-                      ✉️ OTP मिळवा (Request OTP)
-                    </button>
-                  </form>
-                )}
-
-                {otpStep === 'INPUT_OTP' && (
-                  <div className="space-y-3 text-xs">
-                    <p className="text-[10px] text-gray-500 font-bold text-center">
-                      आम्ही <span className="text-forest-600">{otpEmail}</span> वर ६ अंकी OTP पाठवला आहे.
-                    </p>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 block text-center">OTP कोड टाका (Enter OTP)</label>
-                      <input 
-                        type="text" 
-                        maxLength={6}
-                        value={enteredOtp}
-                        onChange={(e) => setEnteredOtp(e.target.value.replace(/\D/g, ''))}
-                        placeholder="उदा. 123456" 
-                        className="w-full text-center text-sm tracking-widest border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-black text-gray-800 bg-white"
-                        required 
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (enteredOtp === generatedOtp) {
-                          setOtpStep('INPUT_NEW_PASS');
-                          setMockEmailAlert(null);
-                        } else {
-                          alert("❌ चुकीचा OTP कूट! कृपया ईमेल आऊटबॉक्समध्ये पाहून योग्य कोड टाका.");
-                        }
-                      }}
-                      className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all"
-                    >
-                      ✅ OTP सत्यापित करा (Verify OTP)
-                    </button>
-                  </div>
-                )}
-
-                {otpStep === 'INPUT_NEW_PASS' && (
-                  <div className="space-y-3 text-xs">
-                    <p className="text-[10px] text-emerald-700 font-bold bg-emerald-50 p-2 rounded-lg border border-emerald-100 text-center">
-                      ✓ OTP यशस्वीरित्या सत्यापित! नवीन पासवर्ड सेट करा.
-                    </p>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-gray-500 block">नवीन पासवर्ड (New Password)</label>
-                      <input 
-                        type="password" 
-                        value={otpNewPass}
-                        onChange={(e) => setOtpNewPass(e.target.value)}
-                        placeholder="किमान ४ अक्षरे" 
-                        className="w-full border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800 bg-white"
-                        required 
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        const trimmed = otpNewPass.trim();
-                        if (trimmed.length < 4) {
-                          alert("❌ पासवर्ड कमीत कमी ४ अक्षरांचा असावा!");
-                          return;
-                        }
-                        const nextUsers = users.map(user => 
-                          user.username.toLowerCase() === otpUser.toLowerCase() 
-                            ? { ...user, password: trimmed } 
-                            : user
-                        );
-                        setUsers(nextUsers);
-                        localStorage.setItem('t_users', JSON.stringify(nextUsers));
-                        
-                        alert("🎉 पासवर्ड यशस्वीरित्या बदलला! आता तुम्ही नवीन पासवर्डने लॉगिन करू शकता.");
-                        
-                        // Reset states
-                        setShowOtpChange(false);
-                        setOtpStep('INPUT_USER');
-                        setOtpUser('');
-                        setOtpEmail('');
-                        setGeneratedOtp('');
-                        setEnteredOtp('');
-                        setOtpNewPass('');
-                        setMockEmailAlert(null);
-                      }}
-                      className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all"
-                    >
-                      💾 पासवर्ड जतन करा (Save Password)
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget);
-                const u = data.get('username') as string;
-                const p = data.get('password') as string;
-                const res = loginWithCredentials(u, p);
-                if (!res.success) {
-                  alert(lang === 'MARATHI' ? '❌ चुकीचे क्रेडेंशियल्स!' : lang === 'HINDI' ? '❌ गलत क्रेडेंशियल्स!' : '❌ Invalid credentials!');
-                }
-              }} className="space-y-4">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-600 block">वापरकर्तानाव (Username)</label>
-                  <input 
-                    type="text" 
-                    name="username" 
-                    placeholder="उदा. master / admin" 
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800" 
-                    required 
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-gray-600 block">पासवर्ड (Password)</label>
-                  <input 
-                    type="password" 
-                    name="password" 
-                    placeholder="••••••••" 
-                    className="w-full text-xs border border-gray-200 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-forest-500 font-bold text-gray-800" 
-                    required 
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full bg-forest-600 hover:bg-forest-700 text-white font-bold py-2.5 rounded-xl text-xs shadow-md transition-all flex items-center justify-center gap-1.5"
-                >
-                  {lang === 'ENGLISH' ? '🔐 Sign In' : '🔐 लॉगिन करा (Sign In)'}
-                </button>
-
-                <div className="flex justify-center pt-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setShowOtpChange(true);
-                      setOtpStep('INPUT_USER');
-                      setMockEmailAlert(null);
-                    }}
-                    className="text-[10px] text-forest-600 hover:underline font-extrabold"
-                  >
-                    🔑 ईमेल OTP द्वारे पासवर्ड बदला (Change Password via OTP)
-                  </button>
-                </div>
-              </form>
-            )}
-
-
-
-            {/* Quick Demo logins section */}
-            <div className="pt-3 border-t border-gray-100">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block text-center mb-2">
-                झटपट डेमो लॉगिन (Quick Demo Logins)
-              </span>
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  onClick={() => loginWithCredentials('master', 'master123')}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-purple-50 hover:bg-purple-100 border border-purple-100 transition-all text-left"
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="text-lg">👑</span>
-                    <div>
-                      <h4 className="font-bold text-xs text-purple-950">मास्टर अॅडमीन (Master Admin)</h4>
-                      <p className="text-[9px] text-purple-600">सर्व दुकाने व्यवस्थापित करा (Multiple Shops)</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] bg-purple-200 text-purple-850 font-extrabold px-2 py-0.5 rounded">master</span>
-                </button>
-
-                
-              </div>
-            </div>
-
-            </div>
-        </div>
-      </div>
+      <LandingPage 
+        supabaseClient={masterSupabaseClient}
+        onAuthSuccess={async (user) => {
+           // Wait, LandingPage handles auth state and shows ONBOARDING by default right now.
+           // Let's check if the user's email matches an existing user
+           const existing = users.find(u => u.email === user.email);
+           if (existing) {
+              setCurrentUser(existing);
+              setRole(existing.role);
+              setCurrentShopId(existing.shopId || '');
+              localStorage.setItem('t_role', existing.role);
+              localStorage.setItem('t_active_user', JSON.stringify(existing));
+              if (existing.shopId) localStorage.setItem('current_shop_id', existing.shopId);
+           }
+           // If not found locally, we ideally should check Supabase t_user_accounts,
+           // but since it's a demo/mock, Onboarding will catch them.
+        }}
+        onOnboardingComplete={(shopData) => {
+          const sId = "SHP" + Date.now();
+          const newShop: Shop = {
+            id: sId,
+            name: shopData.name,
+            address: shopData.address,
+            whatsNo: shopData.whatsNo,
+            upiId: shopData.upiId,
+            gstNumber: '',
+            created_at: Date.now(),
+            sbUrl: '',
+            sbKey: '',
+            license_status: 'ACTIVE',
+            verification_status: 'PENDING',
+            license_expiry_date: Date.now() + 31536000000 // 1 year
+          };
+          const nextShops = [...shops, newShop];
+          setShops(nextShops);
+          localStorage.setItem('t_shops', JSON.stringify(nextShops));
+          if (autoSync && masterSbUrl && masterSbKey) { 
+             uploadTableToSupabase('t_shops', nextShops); 
+          }
+          
+          const newAdmin: UserAccount = {
+            id: "USR" + Date.now(),
+            username: shopData.name.replace(/\s/g, '').toLowerCase() + '_admin',
+            password: 'shop',
+            role: 'SHOP_ADMIN' as UserRole,
+            shopId: sId,
+            email: shopData.email,
+            last_updated: Date.now()
+          };
+          const nextUsers = [...users, newAdmin];
+          setUsers(nextUsers);
+          localStorage.setItem('t_users', JSON.stringify(nextUsers));
+          if (autoSync && masterSbUrl && masterSbKey) { 
+             uploadTableToSupabase('t_user_accounts', nextUsers); 
+          }
+          
+          setCurrentUser(newAdmin);
+          setRole('SHOP_ADMIN');
+          setCurrentShopId(sId);
+          localStorage.setItem('t_role', 'SHOP_ADMIN');
+          localStorage.setItem('t_active_user', JSON.stringify(newAdmin));
+          localStorage.setItem('current_shop_id', sId);
+          alert('Boutique initialized successfully! Your verification status is PENDING.');
+        }}
+        onDemoLogin={(demoRole) => {
+          if (demoRole === 'master') {
+            loginWithCredentials('master', 'master123');
+          } else {
+            loginWithCredentials('shop', 'shop123');
+          }
+        }}
+      />
     );
   }
 
@@ -2092,7 +1872,7 @@ export default function App() {
   };
 
   const currentShopData = shops.find(s => s.id === currentShopId);
-  const isLicenseExpired = currentShopData && (currentShopData.license_status === 'EXPIRED' || currentShopData.license_status === 'SUSPENDED') && role !== 'MASTER_ADMIN';
+  const isLicenseExpired = currentShopData && (currentShopData.license_status === 'EXPIRED' || currentShopData.license_status === 'SUSPENDED' || currentShopData.access_locked || currentShopData.verification_status === 'PENDING' || currentShopData.verification_status === 'REJECTED') && role !== 'MASTER_ADMIN';
 
   if (isLicenseExpired) {
     return (
@@ -2104,8 +1884,13 @@ export default function App() {
             <p className="text-xs opacity-90 mt-1">(License Blocked)</p>
           </div>
           <div className="p-6 space-y-4">
-            <p className="text-sm font-bold text-gray-800">तुमच्या दुकानाचा परवाना सध्या {currentShopData.license_status === 'EXPIRED' ? 'कालबाह्य (EXPIRED)' : 'निलंबित (SUSPENDED)'} आहे.</p>
-            <p className="text-xs text-gray-500">कृपया सेवा पुन्हा सुरू करण्यासाठी आणि डेटा ऍक्सेस मिळवण्यासाठी मास्टर ॲडमिनशी संपर्क साधा.</p>
+            <p className="text-sm font-bold text-gray-800">
+               {currentShopData.verification_status === 'PENDING' ? 'Your shop is pending verification. (दुकान पडताळणी प्रलंबित आहे)' : 
+                currentShopData.verification_status === 'REJECTED' ? 'Your shop verification was rejected. (दुकान पडताळणी नाकारली आहे)' :
+                currentShopData.access_locked ? 'Your shop access has been locked by admin. (दुकानाचा ऍक्सेस लॉक केला आहे)' :
+                `तुमच्या दुकानाचा परवाना सध्या ${currentShopData.license_status === 'EXPIRED' ? 'कालबाह्य (EXPIRED)' : 'निलंबित (SUSPENDED)'} आहे.`}
+            </p>
+            <p className="text-xs text-gray-500">Please contact the Master Admin for access.</p>
             <button
                onClick={handleLogout}
                className="mt-4 w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-bold py-2.5 rounded-xl transition-all active:scale-95"
@@ -3570,7 +3355,7 @@ export default function App() {
                 <div className="flex gap-2 bg-gray-50 p-1.5 rounded-xl border border-gray-100 text-xs font-bold">
                   <button
                     onClick={() => setSbSubTab('status')}
-                    className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                    className={`flex-1 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       sbSubTab === 'status' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -3578,7 +3363,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setSbSubTab('sql')}
-                    className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                    className={`flex-1 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       sbSubTab === 'sql' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -3586,7 +3371,7 @@ export default function App() {
                   </button>
                   <button
                     onClick={() => setSbSubTab('guide')}
-                    className={`flex-1 py-2 text-center rounded-lg transition-all ${
+                    className={`flex-1 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       sbSubTab === 'guide' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
@@ -3834,7 +3619,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -3950,7 +3736,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
-ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING';
 `}
                       </pre>
                       <button
@@ -3967,7 +3754,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4083,7 +3871,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
-ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING';
 `;
                           navigator.clipboard.writeText(sqlCode);
                           alert("SQL कोड यशस्वीरित्या कॉपी केला! आता तो Supabase मध्ये जाऊन पेस्ट करू शकता. 📋");
@@ -4353,10 +4142,35 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                 </div>
 
                 {/* Internal Sub-navigation Tabs for Master Admin */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-indigo-50/50 p-1 rounded-xl border border-indigo-100 text-[11px] font-black">
+                <div className="flex flex-wrap gap-1.5 bg-indigo-50/50 p-1 rounded-xl border border-indigo-100 text-[11px] font-black overflow-x-auto">
+                  <button
+                    onClick={() => setMasterSbSubTab('verification')}
+                    className={`px-3 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap whitespace-nowrap ${
+                      masterSbSubTab === 'verification' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
+                    }`}
+                  >
+                    🔍 Verification Queue
+                  </button>
+                  <button
+                    onClick={() => setMasterSbSubTab('tenants')}
+                    className={`px-3 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap whitespace-nowrap ${
+                      masterSbSubTab === 'tenants' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
+                    }`}
+                  >
+                    🏢 Tenant Directory
+                  </button>
+                  <button
+                    onClick={() => setMasterSbSubTab('coupons')}
+                    className={`px-3 px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap whitespace-nowrap ${
+                      masterSbSubTab === 'coupons' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
+                    }`}
+                  >
+                    🎟️ Coupons
+                  </button>
+
                   <button
                     onClick={() => setMasterSbSubTab('status')}
-                    className={`py-2 text-center rounded-lg transition-all ${
+                    className={`px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       masterSbSubTab === 'status' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
                     }`}
                   >
@@ -4364,7 +4178,7 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                   </button>
                   <button
                     onClick={() => setMasterSbSubTab('master_sql')}
-                    className={`py-2 text-center rounded-lg transition-all ${
+                    className={`px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       masterSbSubTab === 'master_sql' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
                     }`}
                   >
@@ -4372,7 +4186,7 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                   </button>
                   <button
                     onClick={() => setMasterSbSubTab('shop_sql')}
-                    className={`py-2 text-center rounded-lg transition-all ${
+                    className={`px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       masterSbSubTab === 'shop_sql' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
                     }`}
                   >
@@ -4380,7 +4194,7 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                   </button>
                   <button
                     onClick={() => setMasterSbSubTab('guide')}
-                    className={`py-2 text-center rounded-lg transition-all ${
+                    className={`px-3 py-2 text-center rounded-lg transition-all whitespace-nowrap ${
                       masterSbSubTab === 'guide' ? 'bg-indigo-600 text-white shadow-sm' : 'text-indigo-900 hover:bg-indigo-100/50'
                     }`}
                   >
@@ -4632,7 +4446,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4662,7 +4477,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts Table)
@@ -4713,7 +4529,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4829,7 +4646,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
-ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING';
 `}
                       </pre>
                       <button
@@ -4846,7 +4664,8 @@ CREATE TABLE IF NOT EXISTS t_shops (
   sb_url TEXT,
   sb_key TEXT,
   license_status TEXT DEFAULT 'ACTIVE',
-  license_expiry_date BIGINT
+  license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING'
 );
 
 -- २. वापरकर्ता खाती टेबल (User Accounts)
@@ -4962,7 +4781,8 @@ ALTER TABLE t_audit_logs DISABLE ROW LEVEL SECURITY;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_url TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS sb_key TEXT;
 ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_status TEXT DEFAULT 'ACTIVE';
-ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
+ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT,
+  verification_status TEXT DEFAULT 'PENDING';
 `;
                           navigator.clipboard.writeText(sqlCode);
                           alert("दुकान SQL कोड यशस्वीरित्या कॉपी केला! 📋");
@@ -5022,6 +4842,7 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
               </div>
 
               {/* Main admin workflow section */}
+              {masterSbSubTab === 'tenants' && (
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 
                 {/* Left Forms column */}
@@ -5209,6 +5030,17 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                                 <option value="SUSPENDED">🟠 SUSPENDED</option>
                                 <option value="EXPIRED">🔴 EXPIRED</option>
                               </select>
+                              <button
+                                onClick={() => {
+                                  const updated = shops.map(shop => shop.id === s.id ? { ...shop, access_locked: !shop.access_locked } : shop);
+                                  setShops(updated);
+                                  localStorage.setItem('t_shops', JSON.stringify(updated));
+                                  if (autoSync && masterSbUrl && masterSbKey) uploadTableToSupabase('t_shops', updated);
+                                }}
+                                className={`text-[10px] font-black px-2 py-1 rounded border ${s.access_locked ? 'bg-rose-50 border-rose-200 text-rose-700' : 'bg-slate-50 border-slate-200 text-slate-700'}`}
+                              >
+                                {s.access_locked ? '🔒 Locked' : '🔓 Unlocked'}
+                              </button>
                               <div className="flex items-center gap-1">
                                 <label className="text-[9px] font-bold text-gray-500">Expiry:</label>
                                 <input 
@@ -5302,9 +5134,137 @@ ALTER TABLE t_shops ADD COLUMN IF NOT EXISTS license_expiry_date BIGINT;
                 </div>
 
               </div>
+
+          
+              )}
+              
+              {/* TAB: VERIFICATION QUEUE */}
+              {masterSbSubTab === 'verification' && (
+                <div className="bg-white rounded-2xl p-5 border border-forest-100 shadow-sm">
+                  <h3 className="font-extrabold text-sm text-gray-800 flex items-center gap-1.5 border-b pb-3 mb-4">
+                    <span>🔍</span> Verification Queue
+                  </h3>
+                  <div className="space-y-4">
+                    {shops.filter(s => s.verification_status === 'PENDING').length === 0 ? (
+                      <div className="text-center py-8 text-gray-400 text-xs font-bold">
+                        No pending verification requests.
+                      </div>
+                    ) : (
+                      shops.filter(s => s.verification_status === 'PENDING').map(shop => (
+                        <div key={shop.id} className="border border-amber-200 bg-amber-50 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+                          <div className="space-y-1 text-sm text-gray-700">
+                            <p className="font-black text-amber-900">{shop.name}</p>
+                            <p className="text-xs">📍 {shop.address} | 📞 {shop.whatsNo}</p>
+                            <p className="text-xs">UPI: {shop.upiId}</p>
+                            <p className="text-[10px] text-gray-500">Requested: {new Date(shop.created_at).toLocaleString()}</p>
+                          </div>
+                          <div className="flex gap-2 w-full md:w-auto">
+                            <button
+                              onClick={() => {
+                                const nextShops = shops.map(s => s.id === shop.id ? { ...s, verification_status: 'APPROVED', license_status: 'ACTIVE' as any } : s);
+                                setShops(nextShops);
+                                localStorage.setItem('t_shops', JSON.stringify(nextShops));
+                                if (masterSbUrl && masterSbKey) uploadTableToSupabase('t_shops', nextShops);
+                              }}
+                              className="flex-1 md:flex-none px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-lg transition-colors"
+                            >
+                              ✅ Approve
+                            </button>
+                            <button
+                              onClick={() => {
+                                const nextShops = shops.map(s => s.id === shop.id ? { ...s, verification_status: 'REJECTED' } : s);
+                                setShops(nextShops);
+                                localStorage.setItem('t_shops', JSON.stringify(nextShops));
+                                if (masterSbUrl && masterSbKey) uploadTableToSupabase('t_shops', nextShops);
+                              }}
+                              className="flex-1 md:flex-none px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-lg transition-colors"
+                            >
+                              ❌ Reject
+                            </button>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* TAB: COUPON MANAGEMENT */}
+              {masterSbSubTab === 'coupons' && (
+                <div className="bg-white rounded-2xl p-5 border border-forest-100 shadow-sm">
+                  <h3 className="font-extrabold text-sm text-gray-800 flex items-center gap-1.5 border-b pb-3 mb-4">
+                    <span>🎟️</span> Coupon Management
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="md:col-span-1 space-y-4">
+                      <form onSubmit={(e) => {
+                        e.preventDefault();
+                        const fd = new FormData(e.currentTarget);
+                        const cCode = (fd.get('c_code') as string).toUpperCase().trim();
+                        const cDisc = parseFloat(fd.get('c_disc') as string);
+                        const cExp = new Date(fd.get('c_exp') as string).getTime();
+                        if (coupons.some(c => c.code === cCode)) {
+                          alert('Coupon code already exists!');
+                          return;
+                        }
+                        const newC = {
+                          id: 'COUP-' + Date.now(),
+                          code: cCode,
+                          discount_percentage: cDisc,
+                          expiry_date: cExp,
+                          created_at: Date.now()
+                        };
+                        const next = [...coupons, newC];
+                        setCoupons(next);
+                        localStorage.setItem('t_coupons', JSON.stringify(next));
+                        e.currentTarget.reset();
+                      }} className="space-y-3">
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-600 mb-1">Coupon Code</label>
+                          <input type="text" name="c_code" required className="w-full text-xs p-2 border rounded-lg uppercase" placeholder="e.g. SALE20" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-600 mb-1">Discount %</label>
+                          <input type="number" name="c_disc" required min="1" max="100" className="w-full text-xs p-2 border rounded-lg" placeholder="10" />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-gray-600 mb-1">Expiry Date</label>
+                          <input type="date" name="c_exp" required className="w-full text-xs p-2 border rounded-lg" />
+                        </div>
+                        <button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 rounded-lg transition-colors">
+                          Generate Coupon
+                        </button>
+                      </form>
+                    </div>
+                    <div className="md:col-span-2 space-y-3">
+                      {coupons.length === 0 ? (
+                        <div className="text-center py-8 text-gray-400 text-xs font-bold">No coupons generated yet.</div>
+                      ) : (
+                        coupons.map(c => (
+                          <div key={c.id} className="border border-indigo-100 bg-indigo-50/30 rounded-xl p-3 flex justify-between items-center">
+                            <div>
+                              <span className="bg-indigo-600 text-white px-2 py-0.5 rounded text-xs font-black tracking-wider">{c.code}</span>
+                              <p className="text-xs text-gray-600 mt-1">{c.discount_percentage}% OFF</p>
+                              <p className="text-[10px] text-gray-500">Expires: {new Date(c.expiry_date).toLocaleDateString()}</p>
+                            </div>
+                            <button onClick={() => {
+                              if(confirm('Delete coupon?')) {
+                                const next = coupons.filter(x => x.id !== c.id);
+                                setCoupons(next);
+                                localStorage.setItem('t_coupons', JSON.stringify(next));
+                              }
+                            }} className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
-
           {/* Software Developer Footer Branding */}
           <div className="mt-8 pt-4 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-gray-400 font-bold no-print">
             <span>© {new Date().getFullYear()} सर्व हक्क सुरक्षित.</span>

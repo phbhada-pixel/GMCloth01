@@ -111,6 +111,8 @@ export interface Shop {
   sbKey?: string;
   license_status?: 'ACTIVE' | 'EXPIRED' | 'SUSPENDED';
   license_expiry_date?: number;
+  verification_status?: string;
+  access_locked?: boolean;
 }
 
 export interface UserAccount {
@@ -122,4 +124,12 @@ export interface UserAccount {
   email?: string; // Optional email for password change via OTP
   session_token?: string;
   last_updated?: number;
+}
+
+export interface Coupon {
+  id: string;
+  code: string;
+  discount_percentage: number;
+  expiry_date: number;
+  created_at: number;
 }
