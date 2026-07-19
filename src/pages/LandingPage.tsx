@@ -1,16 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Store, TrendingUp, Users, Smartphone, ArrowRight, ShieldCheck, CheckCircle2, ChevronRight, Mail, Crown } from 'lucide-react';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { useEffect } from 'react';
+import { supabase } from '../lib/supabaseClient';
 
 interface LandingPageProps {
-  supabaseClient: SupabaseClient | null;
-  onAuthSuccess: (user: any) => void;
-  onOnboardingComplete: (shopData: any) => void;
-  onDemoLogin: (role: 'master' | 'shop' | 'employee') => void;
+  supabaseClient?: SupabaseClient | null;
+  onAuthSuccess?: (user: any) => void;
+  onOnboardingComplete?: (shopData: any) => void;
+  onDemoLogin?: (role: 'master' | 'shop' | 'employee') => void;
 }
 
-export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardingComplete, onDemoLogin }: LandingPageProps) {
+export default function LandingPage({ 
+  supabaseClient = supabase, 
+  onAuthSuccess, 
+  onOnboardingComplete, 
+  onDemoLogin 
+}: LandingPageProps = {}) {
   const [authMode, setAuthMode] = useState<'LOGIN' | 'SIGNUP'>('SIGNUP');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,7 +28,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
         if (event === 'SIGNED_IN' && session) {
            setAuthUser(session.user);
            setAuthStep('ONBOARDING');
-           onAuthSuccess(session.user);
+           onAuthSuccess?.(session.user);
            if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
         }
       });
@@ -77,20 +82,20 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
             if (error) {
                 console.warn('Real Supabase demo login failed, using local fallback:', error.message);
                 // Fallback for demo environment if credentials don't exist
-                onDemoLogin('shop');
+                onDemoLogin?.('shop');
                 // removed pushState to avoid 404 on GH pages
             } else if (data.user) {
                 // removed pushState to avoid 404 on GH pages
-                onAuthSuccess(data.user);
+                onAuthSuccess?.(data.user);
             }
         } else {
             // Local fallback
-            onDemoLogin('shop');
+            onDemoLogin?.('shop');
             // removed pushState to avoid 404 on GH pages
         }
     } catch (err) {
         console.error(err);
-        onDemoLogin('shop');
+        onDemoLogin?.('shop');
         // removed pushState to avoid 404 on GH pages
     } finally {
         setLoading(false);
@@ -100,7 +105,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
   const submitOnboarding = (e: React.FormEvent) => {
     e.preventDefault();
     if (!shopName || !address || !whatsApp || !upi) return alert('Please fill in all details');
-    onOnboardingComplete({ name: shopName, address, whatsNo: whatsApp, upiId: upi, email: authUser?.email || email });
+    onOnboardingComplete?.({ name: shopName, address, whatsNo: whatsApp, upiId: upi, email: authUser?.email || email });
   };
 
   return (
@@ -236,7 +241,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
                   <div className="pt-6 border-t border-white/10 mt-6">
                      <p className="text-[10px] text-center font-bold text-slate-500 mb-3 uppercase tracking-widest">Demo Environment Access</p>
                      <div className="grid grid-cols-2 gap-3">
-                       <button onClick={() => onDemoLogin('master')} className="flex items-center justify-center gap-1.5 text-xs font-bold bg-white/5 border border-white/10 text-slate-300 py-2.5 rounded-xl hover:bg-white/10 transition-colors">
+                       <button onClick={() => onDemoLogin?.('master')} className="flex items-center justify-center gap-1.5 text-xs font-bold bg-white/5 border border-white/10 text-slate-300 py-2.5 rounded-xl hover:bg-white/10 transition-colors">
                          <Crown className="w-3.5 h-3.5 text-amber-400" /> Master
                        </button>
                        <button onClick={handleDemoShopLogin} className="flex items-center justify-center gap-1.5 text-xs font-bold bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 py-2.5 rounded-xl hover:bg-indigo-500/20 transition-colors">
