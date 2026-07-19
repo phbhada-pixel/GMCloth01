@@ -33,14 +33,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     };
     getInitialSession();
 
-    // 2. Listen for the Google/Magic Link URL hash token
+    // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
       if (mounted) {
         setSession(newSession);
         setIsLoading(false);
       }
 
-      // 3. Catch the login and wipe the ugly URL
       if (event === 'SIGNED_IN') {
         navigate('/dashboard'); 
       }
