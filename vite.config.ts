@@ -31,6 +31,6 @@ const whatsappApiPlugin = (): Plugin => ({
 });
 
 export default defineConfig({
-  base: './',
+  base: '/GMCloth01/',
   plugins: [whatsappApiPlugin()],
 });
