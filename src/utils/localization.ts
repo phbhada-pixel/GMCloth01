@@ -1,4 +1,4 @@
-import { Language } from './types';
+import { Language } from '../types';
 
 const translations: Record<string, Record<Language, string>> = {
   app_title: {
