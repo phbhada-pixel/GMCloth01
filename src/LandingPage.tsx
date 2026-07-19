@@ -24,6 +24,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
            setAuthUser(session.user);
            setAuthStep('ONBOARDING');
            onAuthSuccess(session.user);
+           if (window.location.hash) window.history.replaceState(null, '', window.location.pathname);
         }
       });
       return () => {
@@ -77,20 +78,20 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
                 console.warn('Real Supabase demo login failed, using local fallback:', error.message);
                 // Fallback for demo environment if credentials don't exist
                 onDemoLogin('shop');
-                window.history.pushState({}, '', '/dashboard');
+                // removed pushState to avoid 404 on GH pages
             } else if (data.user) {
-                window.history.pushState({}, '', '/dashboard');
+                // removed pushState to avoid 404 on GH pages
                 onAuthSuccess(data.user);
             }
         } else {
             // Local fallback
             onDemoLogin('shop');
-            window.history.pushState({}, '', '/dashboard');
+            // removed pushState to avoid 404 on GH pages
         }
     } catch (err) {
         console.error(err);
         onDemoLogin('shop');
-        window.history.pushState({}, '', '/dashboard');
+        // removed pushState to avoid 404 on GH pages
     } finally {
         setLoading(false);
     }
