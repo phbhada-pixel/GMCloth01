@@ -37,6 +37,17 @@ export default function LoginPage() {
         });
         if (error) throw error;
         
+        if (data?.user) {
+          try {
+            await supabase.from('suppliers').insert({
+              user_id: data.user.id,
+              is_approved: false
+            });
+          } catch (e) {
+            console.error('Failed to create supplier record:', e);
+          }
+        }
+
         if (data?.user && data?.session === null) {
           setError('Registration successful. Please check your email for verification.');
         } else {
