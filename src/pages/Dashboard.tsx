@@ -58,7 +58,7 @@ import { Barcode } from '../components/ui/Barcode';
 const HARDCODED_MASTER_SB_URL: string = "https://fxfjnrvbyqhmrllexljo.supabase.co";
 const HARDCODED_MASTER_SB_KEY: string = "sb_publishable_txQ_Rra5LY2QjblbFf2AAg_vhCwylAU";
 
-export default function App() {
+export default function Dashboard() {
   // Authentication & Configuration State
   const [role, setRole] = useState<UserRole | null>(() => {
     const saved = localStorage.getItem('t_role');
