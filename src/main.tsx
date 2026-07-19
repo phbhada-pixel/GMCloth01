@@ -3,9 +3,7 @@ import ReactDOM from 'react-dom/client'
 import { HashRouter as Router, Routes, Route } from 'react-router-dom'
 import AuthProvider from './components/AuthProvider'
 import LandingPage from './pages/LandingPage'
-import LoginPage from './pages/LoginPage'
 import Dashboard from './pages/Dashboard'
-import ApprovalGuard from './components/ApprovalGuard'
 import './index.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
@@ -14,12 +12,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       <AuthProvider>
         <Routes>
           <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/dashboard" element={
-            <ApprovalGuard>
-              <Dashboard />
-            </ApprovalGuard>
-          } />
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </AuthProvider>
     </Router>
