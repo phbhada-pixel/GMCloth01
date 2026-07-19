@@ -44,7 +44,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
     setLoading(true);
     const { error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: window.location.href }
+      options: { redirectTo: window.location.origin + window.location.pathname }
     });
     setLoading(false);
     if (error) alert(error.message);
@@ -56,7 +56,7 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
     setLoading(true);
     const { error } = await supabaseClient.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: window.location.href }
+      options: { emailRedirectTo: window.location.origin + window.location.pathname }
     });
     setLoading(false);
     if (error) {
