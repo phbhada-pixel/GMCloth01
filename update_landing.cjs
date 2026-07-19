@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+const fs = require('fs');
+
+const code = `import React, { useState } from 'react';
 import { Store, TrendingUp, Users, Smartphone, ArrowRight, ShieldCheck, CheckCircle2, ChevronRight, Mail, Crown } from 'lucide-react';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { useEffect } from 'react';
@@ -359,3 +361,5 @@ export default function LandingPage({ supabaseClient, onAuthSuccess, onOnboardin
     </div>
   );
 }
+`
+fs.writeFileSync('src/LandingPage.tsx', code);
