@@ -14,12 +14,10 @@ export default function LoginPage() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-
     if (password.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
     }
-
     setLoading(true);
 
     try {
@@ -55,7 +53,11 @@ export default function LoginPage() {
         }
       }
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication.');
+      let message = err.message || 'An error occurred during authentication.';
+      if (message === 'Failed to fetch') {
+        message = 'Failed to connect to Supabase. Ensure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY are set in your .env file.';
+      }
+      setError(message);
     } finally {
       setLoading(false);
     }
@@ -137,6 +139,7 @@ export default function LoginPage() {
           <p className="text-sm text-slate-400">
             {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
             <button
+              type="button"
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError(null);
