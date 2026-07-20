@@ -172,7 +172,7 @@ export default function Dashboard() {
               {/* Stats Row */}
               <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { label: 'Total Revenue', value: '$24,592.00', trend: '+12.5%', icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
+                  { label: 'Total Revenue', value: '$24,592.00', trend: '+12.5%', icon: TrendingUp, Users, color: 'text-emerald-400', bg: 'bg-emerald-400/10', border: 'border-emerald-400/20' },
                   { label: 'Active Invoices', value: '142', trend: '+4.2%', icon: FileText, color: 'text-indigo-400', bg: 'bg-indigo-400/10', border: 'border-indigo-400/20' },
                   { label: 'Total Customers', value: '1,204', trend: '+18.1%', icon: Users, color: 'text-purple-400', bg: 'bg-purple-400/10', border: 'border-purple-400/20' },
                 ].map((stat, idx) => (
