@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient'; // Ensure your supabase client is here
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
@@ -56,8 +56,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     };
   }, [navigate]);
 
+  const value = useMemo(() => ({ session, supabase, isLoading }), [session, isLoading]);
+
   return (
-    <AuthContext.Provider value={{ session, supabase, isLoading }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
