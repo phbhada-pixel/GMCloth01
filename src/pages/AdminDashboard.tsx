@@ -5,7 +5,7 @@ import { Shield, Check, Clock, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function AdminDashboard() {
-  const { session } = useAuth();
+  const { session, isLoading } = useAuth();
   const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -15,6 +15,8 @@ export default function AdminDashboard() {
   const isAdmin = session?.user?.email ? adminEmails.includes(session.user.email) : false;
 
   useEffect(() => {
+    if (isLoading) return;
+    
     if (!session) {
       navigate('/login');
       return;
@@ -25,7 +27,7 @@ export default function AdminDashboard() {
     } else {
       setLoading(false);
     }
-  }, [session, isAdmin, navigate]);
+  }, [session, isAdmin, navigate, isLoading]);
 
   const fetchSuppliers = async () => {
     try {

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { supabase } from '../lib/supabaseClient';
 import PendingApproval from '../pages/PendingApproval';
@@ -7,8 +8,14 @@ export default function ApprovalGuard({ children }: { children: React.ReactNode 
   const { session, isLoading } = useAuth();
   const [isApproved, setIsApproved] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
+    if (!isLoading && !session) {
+      navigate('/login');
+      return;
+    }
+
     if (!session?.user) {
       setIsChecking(false);
       return;

@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabaseClient';
 import { Mail, Lock, AlertCircle, ArrowRight } from 'lucide-react';
+import { useAuth } from '../components/AuthProvider';
 
 export default function LoginPage() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,6 +11,18 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { session, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && session) {
+      const adminEmails = ['phbhada@gmail.com', 'admin@example.com', 'master@example.com'];
+      if (session.user?.email && adminEmails.includes(session.user.email)) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [session, isLoading, navigate]);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,13 +49,14 @@ export default function LoginPage() {
         if (error) throw error;
         
         if (data?.user) {
-          try {
-            await supabase.from('suppliers').insert({
-              user_id: data.user.id,
-              is_approved: false
-            });
-          } catch (e) {
-            console.error('Failed to create supplier record:', e);
+          const { error: insertError } = await supabase.from('suppliers').insert({
+            user_id: data.user.id,
+            is_approved: false
+          });
+          
+          if (insertError) {
+            console.error('Failed to create supplier record:', insertError);
+            throw new Error(`Account created, but failed to save profile: ${insertError.message}`);
           }
         }
 

@@ -1,10 +1,23 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Store, ArrowRight, Shield, Zap, Globe } from 'lucide-react';
+import { useAuth } from '../components/AuthProvider';
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const { session, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && session) {
+      const adminEmails = ['phbhada@gmail.com', 'admin@example.com', 'master@example.com'];
+      if (session.user?.email && adminEmails.includes(session.user.email)) {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [session, isLoading, navigate]);
 
   const containerVariants = {
     hidden: { opacity: 0 },
